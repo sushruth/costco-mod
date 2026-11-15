@@ -1,0 +1,62 @@
+/* Costco's delivery column: [info] [mode | date] right-aligned, boxes and radios removed. */
+:root.cm-on.cm-p-delivery {
+  & .delivery-options {
+    margin-bottom:0 !important;
+    & .selection-item:not(.cart-calendar-box) { border:0 !important; border-radius:0 !important; box-shadow:none !important;
+      background:none !important; padding:0 !important; margin:0 !important; min-height:0 !important; }
+    & .selection-box-v3 { margin-bottom:0 !important; padding:0 !important; border:0 !important; background:none !important; }
+    & .ship-type-and-cost { display:flex; align-items:center; gap:6px; font-size:13px; line-height:18px; font-weight:600; color:var(--cm-ink); }
+  }
+  & .estimated-delivery-date-div, & .estimated-delivery-date-div * { font-size:12px !important; line-height:16px; margin:2px 0 0; }
+  & #order-items .delivery-options label.selection-item { width:fit-content !important; margin-left:auto !important; }
+
+  /* the label holding the calendar, with Costco's earliest-date note on its own line under the chip */
+  & .delivery-options label.selection-item:has(.cart-calendar-box) {
+    display:flex !important; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:4px 0;
+    & > .ship-type-and-cost { height:28px; box-sizing:border-box; padding:0 8px 0 10px; background:var(--cm-surface-2);
+      border:1px solid var(--cm-line-strong); border-right:0; border-radius:14px 0 0 14px; font-size:0 !important; gap:0; }
+    & > .ship-type-and-cost > :not(.cm-ic) { display:none !important; }
+    & > .ship-type-and-cost > .cm-ic { font-size:18px; }
+    & > .cart-delivery-details-link { order:-1; margin-right:6px !important; flex:none; }
+    & > .estimated-delivery-date-div { order:9; flex-basis:100%; text-align:right; margin:0 !important; }
+    & > .estimated-delivery-date-div * { display:inline !important; font-size:12px !important; line-height:16px !important;
+      font-weight:400 !important; color:var(--cm-ink-3) !important; margin:0 !important; }
+    & > .estimated-delivery-date-div > :first-child::after { content:": "; }
+  }
+
+  /* the calendar box shrinks to the chip; Costco's input covers it, invisible, so a click opens Costco's picker */
+  & .cart-calendar-box {
+    border:0 !important; background:none !important; box-shadow:none !important; padding:0 !important; margin:0 !important; display:block;
+    & [id^="calendarWrap"] { position:relative; display:inline-flex; }
+    & input.date-input { position:absolute !important; inset:0; width:100% !important; height:100% !important; opacity:0; cursor:pointer; padding:0; border:0; z-index:1; }
+    & .cart-calendar-text { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    & .co-calendar { display:none; }
+    & label { position:relative; display:block; margin:0; }
+  }
+
+  /* the details link is an info icon */
+  & .cart-delivery-details-link {
+    display:inline-flex; margin:0 !important;
+    & > :is(a, button) { font-size:0 !important; display:inline-block; text-align:center; width:24px; height:24px;
+      padding:0 !important; margin:0 !important; color:var(--cm-ink-3); background:none; border:0; }
+    & > :is(a, button):hover { color:var(--cm-blue); }
+    & .cm-ic { font-size:18px; line-height:24px; }
+    & span:not(.cm-ic) { display:none !important; }
+  }
+
+  /* several ship modes: the toggle stands in for Costco's radios, only the chosen option shows */
+  & #order-items .delivery-options.cm-has-mode {
+    display:flex; flex-direction:column; align-items:flex-end; gap:6px; width:fit-content; margin-left:auto !important;
+    & label.selection-item { padding-left:0 !important; width:auto !important; margin-left:0 !important; }
+    & label.selection-item::before { content:none !important; }
+    & .cm-opt:not(.cm-opt-on) { display:none !important; }
+    & label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost { display:none !important; }
+  }
+  & .warehouse_pickup {
+    margin-top:10px;
+    & .selection-item, & .selection-item * { font-size:12px !important; line-height:16px !important; margin:0 !important; color:var(--cm-ink-2); }
+    & .warehouse_pickup_address_lines { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+    & input:not(:checked) + label .warehouse-pickup-address-v2 > div:not(.warehouse_pickup_address_lines) { display:none !important; }
+    & .cart-delivery-details-button { color:var(--cm-blue) !important; padding:0; background:none; border:0; }
+  }
+}

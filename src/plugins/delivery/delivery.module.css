@@ -1,0 +1,21 @@
+/* Nodes this plugin creates: the segmented mode toggle and the date chip. */
+.mode { display:inline-flex; flex-wrap:wrap; max-width:100%; min-height:28px; border:1px solid var(--cm-line-strong); border-radius:14px; overflow:hidden; }
+.modeBtn {
+  display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 10px; white-space:nowrap; border:0; background:#fff;
+  color:var(--cm-ink-3); font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+  & + & { border-left:1px solid var(--cm-line-strong); }
+  & :global(.cm-ic) { font-size:16px; }
+  &[aria-pressed="true"] { background:var(--cm-blue); color:#fff; }
+  &:focus-visible { outline:2px solid var(--cm-blue); outline-offset:-2px; }
+}
+.chip {
+  display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px 0 8px; border:1px solid var(--cm-line-strong);
+  border-radius:0 14px 14px 0; background:#fff; font-size:13px; line-height:18px; font-weight:600; color:var(--cm-blue); white-space:nowrap;
+  & :global(.cm-ic) { font-size:15px; margin-right:2px; }
+  & > span { display:inline !important; line-height:26px !important; }
+  /* Costco's invisible date input sits on top of the chip */
+  :global([id^="calendarWrap"]):hover > & { background:var(--cm-blue-tint); border-color:var(--cm-blue); }
+  :global(input.date-input):focus-visible + & { outline:2px solid var(--cm-blue); outline-offset:2px; }
+  /* with a mode toggle above it, the chip stands alone */
+  :global(.cm-has-mode) & { border-radius:14px; }
+}

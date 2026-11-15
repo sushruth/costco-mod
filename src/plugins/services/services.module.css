@@ -1,0 +1,6 @@
+.count { font-weight:400; color:var(--cm-ink-3); }
+.toggle {
+  font:inherit; font-size:13px; color:var(--cm-blue); background:none; border:0; padding:0; cursor:pointer; display:inline-flex; align-items:center; gap:2px;
+  & :global(.cm-ic) { font-size:14px; vertical-align:0; }
+  &:focus-visible { outline:2px solid var(--cm-blue); outline-offset:2px; }
+}

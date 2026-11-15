@@ -1,0 +1,11 @@
+/* An auto-added companion (the TV's Allstate plan) reads as a split of its parent card, one outline around both. */
+:root.cm-on.cm-p-pairing #order-items .order-item {
+  &.cm-parent { border-color:var(--cm-group); border-bottom:0; border-radius:4px 4px 0 0; box-shadow:0 0 0 1px var(--cm-group); }
+  &.cm-child {
+    background:var(--cm-surface-2); padding:10px 20px !important; margin-top:-12px;
+    border-color:var(--cm-group); border-top-color:var(--cm-line); border-radius:0 0 4px 4px;
+    box-shadow:0 0 0 1px var(--cm-group); clip-path:inset(0 -2px -2px -2px);
+    & .product-title a { font-size:14px; line-height:20px; }
+  }
+}
+.cm-child-tag { display:flex; align-items:center; gap:6px; font-size:12px; line-height:16px; font-weight:600; color:var(--cm-ink); margin-bottom:2px; }

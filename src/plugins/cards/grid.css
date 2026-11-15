@@ -1,0 +1,47 @@
+/* Desktop: [80 thumb | details] beside [delivery over price], services as a footer split. */
+@media (width > 1024px) {
+  :root.cm-on.cm-p-cards #order-items .order-item {
+    & > .row {
+      display:grid; grid-template-columns:minmax(0,1fr) 320px; grid-template-rows:auto 1fr auto;
+      grid-template-areas:"main deliv" "main price" "svc svc"; column-gap:24px; margin:0;
+      &::before, &::after { display:none; }
+      & > div { float:none; width:auto; margin-left:0; padding:0; min-width:0; }
+      & > [class*="col-xl-7"] { grid-area:main; position:relative; }
+      & > [class*="col-xl-5"]:not([class*="offset"]) { grid-area:deliv; position:relative; }
+      & > .col-xs-12:not([class*="col-xl"]):not(.cart-part-services):not(:has(.cart-part-services)),
+      & > div:has(.cart-part-services), & > .cart-part-services { grid-area:svc; }
+      & > [class*="col-xl-5"] .row { margin:0; }
+      & > [class*="col-xl-5"] [class*="col-"] { padding:0; margin-left:0; }
+      /* price sits in its own cell under delivery, bottom-right, level with the actions row */
+      & > .cm-price-slot { grid-area:price; align-self:end; justify-self:end; margin-top:4px; }
+    }
+    &.cm-email > .row { grid-template-areas:"main price" "main price" "svc svc"; }
+    &.cm-email > .row > [class*="col-xl-5"]:not([class*="offset"]) { display:none; }
+
+    /* thumbnail sits out of flow so its 80px height doesn't push the actions row down */
+    & .azure-entries {
+      position:static; min-height:80px;
+      & [class*="col-"] { min-height:0; }
+      & > .row { margin-inline:0; }
+      & > .row > .item-thumbnail { width:80px; padding:0; position:absolute; inset:0 auto auto 0; }
+      & > .row > .item-thumbnail + .col-xs-9 { width:calc(100% - 96px); margin-left:96px; padding:0; position:static; }
+      & > .row > [class*="col-xl-offset-3"] { margin-left:96px; padding:0; width:calc(100% - 96px); }
+    }
+    & .linked-item { margin-bottom:0; }
+
+    & .cm-price-slot {
+      & .item-description-prices { margin:0; }
+      & .item-description-prices > .price { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:0 10px; text-align:right; }
+      & .product-price { flex-basis:100%; text-align:right; }
+    }
+  }
+}
+
+/* Mobile and tablet: Costco's own stacking, price under the title. */
+@media (width <= 1024px) {
+  :root.cm-on.cm-p-cards #order-items .order-item > .row {
+    display:flex; flex-direction:column;
+    & > [class*="col-xl-7"] { order:-2; }
+    & > .cm-price-slot { order:-1; padding:0 15px 0 calc(25% + 15px); }
+  }
+}

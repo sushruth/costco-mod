@@ -1,0 +1,32 @@
+/* Services: a grey footer split under the item, flush with the card edges. */
+:root.cm-on.cm-p-services #order-items .cart-part-services {
+  &:not(.hidden) { display:block; border-radius:0 0 3px 3px; background:var(--cm-surface-2); border-top:1px solid var(--cm-line);
+    margin:8px -20px -16px !important; padding:10px 20px !important; width:auto !important; float:none; }
+  & :is(.row, [class*="col-"], .container-fluid) { margin:0 !important; padding:0 !important; float:none; width:auto; }
+  & .delivery-services-main { background:none !important; border:0 !important; font-size:12px; line-height:16px; }
+  & h3 { margin:0 !important; display:flex; align-items:center; gap:8px; font-size:13px; line-height:18px; }
+  & h3 label.parts-bold { margin:0; font-size:13px !important; line-height:18px !important; font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+  & [id^="edd-delivery-services-container"] { margin-top:0 !important; padding-top:0 !important; }
+  & [id^="edd-delivery-services-container"] > :first-child { margin-top:0 !important; }
+
+  & .delivery-services-notification {
+    background:none; border:0; padding:0; margin:4px 0 0; color:var(--cm-amber);
+    & * { font-size:12px !important; line-height:16px !important; padding:0 !important; }
+    & img { display:none; }
+    & .cm-ic { font-size:14px; margin-right:6px; vertical-align:-2px; }
+  }
+
+  &.cm-collapsed :is(ul.edd-delivery-services, .parts-types-bold) { display:none !important; }
+  &:not(.cm-collapsed) ul.edd-delivery-services { margin:2px 0 6px; padding:0; list-style:none; max-width:72ch; }
+  & .parts-types-bold { display:block; margin:8px 0 0 !important; font-size:12px !important; line-height:16px !important; font-weight:600; color:var(--cm-ink-3); }
+  & ul.edd-delivery-services li {
+    display:flex; gap:6px; margin:2px 0; font-size:13px; line-height:18px; color:var(--cm-ink);
+    & .add-cart-list-detail { font-size:13px !important; line-height:18px !important; margin:0 !important; padding:0 !important; }
+    & > .add-cart-list-cell:first-child { flex:none; display:flex; padding-top:2px; }
+  }
+  & img.parts-services-tick { display:none; }
+  & .add-cart-list-cell > .ph-check { color:var(--cm-green); font-size:14px; }
+  & .add-cart-list-cell > .ph-info { color:var(--cm-ink-3); font-size:14px; }
+
+  @media (width <= 1024px) { &:not(.hidden) { padding-left:20px !important; } }
+}

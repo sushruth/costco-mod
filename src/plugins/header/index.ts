@@ -7,8 +7,8 @@ import './mui.css';
 import './search.css';
 import s from './header.module.css';
 
-// Site header: the blue category row moves above the logo row, warehouse and ZIP ride on its right end,
-// and Lists / Buy Again follow them, as in Costco's newer header. Switching the view off puts every node back.
+// Site header: the blue category row moves above the logo row. Warehouse and ZIP sit on the cart's title row
+// (or the blue row's right end without one), and Lists / Buy Again become icons at the blue row's right end. Switching the view off puts every node back.
 const navEnd = el('div', { class: s.navEnd });
 
 // Categories that don't fit beside the warehouse and ZIP hide from the right; all stay in the Shop menu.
@@ -66,8 +66,12 @@ function place(on: boolean) {
   if (on) {
     hdr.before(nav);
     menu.append(navEnd);
-    if (loc) navEnd.append(loc);
-    if (lists) navEnd.append(lists);
+    // The warehouse rides on the cart's title row when there is one, else at the blue row's right end.
+    if (loc) { loc.classList.add(s.loc); ($('#cart-title') ?? navEnd).append(loc); }
+    if (lists) {
+      navEnd.append(lists);
+      $$('a', lists).forEach((a) => { a.title ||= text(a); });
+    }
     // Costco's cart glyph turns blank on hover; a Phosphor cart stands in.
     const cart = $('#cart-d');
     if (cart && !$(':scope > .cm-ic', cart)) cart.prepend(ic('shopping-cart-simple'));
@@ -75,7 +79,7 @@ function place(on: boolean) {
     fitNav();
   } else {
     hdr.after(nav);
-    if (loc) $('#left-bar')?.append(loc);
+    if (loc) { loc.classList.remove(s.loc); $('#left-bar')?.append(loc); }
     if (lists) $('#order-nav')?.append(lists);
     navEnd.remove();
     $('#cart-d > .cm-ic')?.remove();
@@ -103,6 +107,9 @@ function holdShopMenu() {
 // "Executive Member hours start at 9AM" to "Executive Member · 9AM". Read on hover, so re-renders don't matter.
 function hoursPopup() {
   addEventListener('pointerover', (e) => {
+    // Lists / Buy Again show as icons; their names become tooltips.
+    const link = (e.target as Element).closest?.('[data-testid=Link_wishlist], [data-testid="Buy Again"]');
+    if (link instanceof HTMLElement && !link.title) link.title = text(link);
     const box = (e.target as Element).closest?.('[data-testid=WarehouseSelectorUI], #deliveryLocation [class*="MuiBox-root"]:has(> .MuiTypography-t7)');
     if (!(box instanceof HTMLElement)) return;
     const lines = $$('*', box).filter((n) => !n.children.length && /hours start/i.test(n.textContent ?? ''));

@@ -39,9 +39,10 @@
   & #navigation-widget {
     position:relative; z-index:20012; /* above the white row (20011), so popups from the blue row show */
     background:var(--cm-blue) !important; /* same blue as the newer header */
-    & nav.menu { margin-left:-12px; display:flex !important; align-items:center; height:36px; overflow-x:clip; overflow-y:visible; }
-    & .nav-item, & #navigation-dropdown { flex:none; height:36px !important; min-height:0 !important; padding:0 12px !important;
-      display:inline-flex !important; align-items:center; gap:4px; }
+    & nav.menu { gap:0 28px; display:flex !important; align-items:center; height:36px; overflow-x:clip; overflow-y:visible; }
+    /* boxes the size of their text, 28px apart, like the newer header */
+    & .nav-item, & #navigation-dropdown { flex:none; height:36px !important; min-height:0 !important; padding:0 !important;
+      display:inline-flex !important; align-items:center; gap:0; }
     & #navigation-dropdown { padding-left:0 !important; }
     & .nav-item[data-cm-overflow] { display:none !important; }
     /* Shop: Phosphor list icon; wide screens swap in the sidebar icon below */
@@ -57,8 +58,8 @@
   @media (width > 1024px) {
     /* keep the first category clear of Shop when the 1440px container sits close to the left edge */
     & #navigation-widget { container-type:inline-size; }
-    & #navigation-widget .fixed-container { padding-left:max(24px, calc(108px - max(0px, (100cqw - 1440px) / 2))) !important; }
-    & #navigation-widget #navigation-dropdown { position:absolute !important; left:12px; top:0; gap:6px !important;
+    & #navigation-widget .fixed-container { padding-left:max(24px, calc(124px - max(0px, (100cqw - 1440px) / 2))) !important; }
+    & #navigation-widget #navigation-dropdown { position:absolute !important; left:24px; top:0; gap:6px !important;
       & > i { display:none !important; }
       &::before { content:"\ec24"; font-family:Phosphor; font-size:20px; font-weight:400; line-height:1; }
     }

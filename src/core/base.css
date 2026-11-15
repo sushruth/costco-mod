@@ -11,7 +11,12 @@ html.cm-on :is(#order-items, #order-summary-column, #order-summary-body) { margi
 html.cm-on #cart > .row > [class*="col-"]:empty { display:none; }
 html.cm-on #cart { padding-top:16px !important; }
 /* the item count lives in the Order review header, so the page title row only stays for screen readers */
-html.cm-on #cart-title { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; margin:0 !important; }
+/* the cart's content lines up with the site header (24px in): the summary column's -15px row margin sits on the right */
+html.cm-on #cart.fixed-container { max-width:1440px !important; padding:16px 39px 24px 24px !important; }
+html.cm-on #cart-title { display:flex; align-items:center; gap:8px; margin:0 0 12px !important; padding:0 0 0 15px !important; float:none; width:100%; color:var(--cm-ink-2);
+  & h1, & h2 { margin:0 !important; font-size:20px !important; line-height:28px !important; }
+  & h2 { font-size:14px !important; color:var(--cm-ink-3); }
+  & #deliveryLocation { margin-left:auto; } }
 html.cm-on #cart-region:not(:has(.alert-notification:not(.hidden))) { display:none; }
 html.cm-on .cm-hide, html.cm-on #cart-body .cm-hide { display:none !important; }
 html:not(.cm-on) :is(#cart-body, footer) [data-cm] { display:none !important; }

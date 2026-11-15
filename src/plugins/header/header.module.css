@@ -1,7 +1,7 @@
-/* Right end of the blue row: warehouse · hours | ZIP, in white. */
-.navEnd {
-  margin-left:auto; flex:none; display:flex; align-items:center; height:36px; padding-left:16px; color:#fff; font-size:13px; white-space:nowrap;
-  & :global(#deliveryLocation), & :global(#deliveryLocation *) { color:#fff !important; fill:#fff; font-size:13px !important; line-height:18px !important; }
+/* Warehouse · hours | ZIP. Takes its text color from wherever it sits: white in the blue row, ink in the cart's title row. */
+.loc {
+  display:flex; align-items:center; font-size:13px; white-space:nowrap;
+  &, & * { color:inherit !important; fill:currentColor; font-size:13px !important; line-height:18px !important; }
   & :global([class*="MuiBox-root"]) { height:auto !important; align-items:center !important; }
   & svg { width:14px !important; height:14px !important; }
   & button { padding:0 0 0 2px !important; min-width:0 !important; font-weight:600 !important; }
@@ -9,7 +9,7 @@
   /* each block: [icon] name · hours */
   & :global([class*="MuiBox-root"]:has(> .MuiTypography-t7)) {
     display:flex !important; align-items:center; gap:4px;
-    & + :global([class*="MuiBox-root"]) { margin-left:12px !important; padding-left:12px; border-left:1px solid rgb(255 255 255 / .4); }
+    & + :global([class*="MuiBox-root"]) { margin-left:12px !important; padding-left:12px; border-left:1px solid color-mix(in srgb, currentColor 40%, transparent); }
     /* hours: a clock after the warehouse name; hovering the warehouse shows them */
     position:relative;
     & > div:last-child:not(:global(.MuiTypography-root)) {
@@ -23,13 +23,17 @@
       background:var(--cm-blue-dark); box-shadow:0 2px 6px rgb(0 0 0 / .25);
     }
   }
-  /* Lists | Buy Again after the ZIP, spaced like the newer header */
+}
+
+/* Right end of the blue row: the warehouse when no title row holds it, then Lists and Buy Again as icons. */
+.navEnd {
+  margin-left:auto; flex:none; display:flex; align-items:center; gap:18px; height:36px; padding-left:0; color:#fff; font-size:13px; white-space:nowrap;
   & :global(#banner-list-actions) {
-    display:flex !important; align-items:center; margin:0 0 0 18px !important; padding:0 !important; list-style:none; gap:20px;
-    &::before { content:""; width:1px; height:14px; margin-right:-2px; background:rgb(255 255 255 / .4); }
-    & li { display:flex; align-items:center; gap:20px; padding:0 !important; border:0 !important; }
-    & li + li::before { content:""; width:1px; height:14px; background:rgb(255 255 255 / .4); }
-    & li::after { content:none !important; }
-    & a { color:#fff !important; font-size:13px !important; line-height:18px !important; padding:0 !important; text-decoration:none; }
+    display:flex !important; align-items:center; margin:0 !important; padding:0 !important; list-style:none; gap:14px;
+    & li { display:flex; align-items:center; padding:0 !important; border:0 !important; }
+    & li::before, & li::after { content:none !important; }
+    & a { display:flex !important; align-items:center; justify-content:center; width:24px; height:36px; color:#fff !important; font-size:0 !important; line-height:0 !important; padding:0 !important; text-decoration:none; }
+    & a::before { font-family:Phosphor; font-size:18px; line-height:18px; height:18px; content:"\eadc"; }
+    & li:last-child a::before { content:"\e1a0"; }
   }
 }

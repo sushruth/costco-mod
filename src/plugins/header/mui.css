@@ -56,8 +56,8 @@
     /* wide screens: Shop sits at the far left; its menu opens as a left sidebar below the blue row. Submenu
        columns show only while the pointer is on the menu; the category list stays. */
     @media (width > 1024px) {
-      & > div > nav { padding-left:max(var(--cm-edge), 108px) !important; }
-      & > div > nav > ul > li:has([data-testid=ShopMenu]) { position:absolute !important; left:12px; top:0; }
+      & > div > nav { padding-left:max(var(--cm-edge), 124px) !important; }
+      & > div > nav > ul > li:has([data-testid=ShopMenu]) { position:absolute !important; left:24px; top:0; }
       & [data-testid=ShopMenu] > button { z-index:1301 !important; gap:6px;
         & > svg { display:none !important; }
         &::before { content:"\ec24"; font-family:Phosphor; font-size:20px; font-weight:400; line-height:1; }
@@ -84,7 +84,7 @@
 
   /* warehouse · hours | ZIP | Lists | Buy Again, in white at the right end of the blue row */
   & > div:has([data-testid=WarehouseSelectorUI]) {
-    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 var(--cm-edge) 0 16px !important; background:var(--cm-blue) !important;
+    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 var(--cm-edge) 0 28px !important; background:var(--cm-blue) !important;
     & > div { background:none !important; height:36px !important; min-height:0 !important; padding:0 !important; }
     /* every wrapper becomes one centered row */
     & :is(div, nav):has(> :is(div, nav, a, button)) {
@@ -110,3 +110,24 @@
     & nav > div:has([data-testid=Link_wishlist]) { gap:12px; }
   }
 }
+
+/* Pages with breadcrumbs: warehouse and ZIP move to the right end of the breadcrumb row (20px under the header),
+   in ink, which leaves the blue row to the categories. Lists and Buy Again stay there as icons. */
+:root.cm-on.cm-p-header:has(nav[data-testid=Breadcrumbs]) header:has([data-testid=SearchBarUI]) > div {
+  position:relative;
+  & nav:has(> div > [data-testid=WarehouseSelectorUI]) {
+    position:absolute !important; top:calc(100% + 20px); right:var(--cm-edge); height:24px !important; z-index:5;
+    &, & * { color:var(--cm-ink-2) !important; fill:var(--cm-ink-2) !important; }
+    & [data-testid=locationselector_DeliveryLocationSelector]::before { background:var(--cm-line-strong) !important; }
+  }
+}
+:root.cm-on.cm-p-header header:has([data-testid=SearchBarUI]) > div > div:has([data-testid=WarehouseSelectorUI]) {
+  & nav > div:has([data-testid=Link_wishlist]) { gap:14px !important; &::before, & [data-testid=Divider] { display:none !important; } }
+  & :is([data-testid=Link_wishlist], [data-testid="Buy Again"]) {
+    display:flex !important; align-items:center; justify-content:center; width:24px; height:36px !important; font-size:0 !important; line-height:0 !important;
+    &::before { font-family:Phosphor; font-size:18px !important; line-height:18px !important; height:18px; content:"\eadc"; }
+    & * { font-size:0 !important; }
+  }
+  & [data-testid="Buy Again"]::before { content:"\e1a0"; }
+}
+

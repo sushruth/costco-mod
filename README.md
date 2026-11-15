@@ -6,7 +6,7 @@ This userscript makes the costco.com cart shorter and easier to scan.
 
 | Before | After |
 | --- | --- |
-| <img src="docs/before.png" alt="Costco cart before" width="420"> | <img src="docs/after.png" alt="Costco cart after" width="420"> |
+| <img src="docs/before-0.4.0.png" alt="Costco cart before" width="420"> | <img src="docs/after-0.4.0.png" alt="Costco cart after" width="420"> |
 
 The screenshots blur prices, discounts, ZIP code and warehouse.
 

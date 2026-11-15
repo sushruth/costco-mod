@@ -29,7 +29,9 @@ The manager checks that URL for updates. Tested with Violentmonkey in a Firefox-
 - A protection plan that Costco auto-added with an item (like the Allstate plan with a TV) is drawn as one unit with that item.
 - The order panel lists every item with its promo end date, warns when items arrive on different days, and copies a plain-text summary.
 - **Discount on Order** is broken down by promo (multi-buy, spend-tier and bundle offers), with the items each one covers, and checked against Costco's total.
-- **Original view** in the panel switches back to Costco's page at any time.
+- The site header is two rows: categories with your warehouse and ZIP in the blue bar, then logo, search, account links and cart.
+- The footer keeps every Costco link in about half the height.
+- **Original view** in the panel switches back to Costco's page at any time. The gear next to the cart turns each part on or off.
 
 ## Privacy
 
@@ -39,9 +41,17 @@ The one outside request is made by your userscript manager at install time: it d
 
 ## Development
 
-- `bun dev/preview.ts [saved-cart.html]` builds `cart.preview.html` from a cart page you saved with your browser, with Costco's scripts removed and this script injected.
-- For a live dev install, serve the folder (`python3 -m http.server 8723`), open `http://127.0.0.1:8723/costco-cart.user.js`, tick **Track external edits** in Violentmonkey and keep that tab open.
-- `localStorage.setItem('cm-dev', '1')` in the cart tab adds a **Redlines** button that outlines every element by nesting depth.
+The source is TypeScript and CSS in `src/`, one folder per feature in `src/plugins/`. [Bun](https://bun.sh) builds it into `costco-cart.user.js`.
+
+```
+bun install
+bun run dev      # dev build, rebuilt on every change
+bun run build    # published build: costco-cart.user.js
+bun run check    # type-check
+```
+
+- `bun run dev` writes `dev/costco-cart.dev.user.js`, which has dev-only switches (like **Redlines**, which outlines every element by nesting depth) and no update URL. Serve the folder (`python3 -m http.server 8723`), open `http://127.0.0.1:8723/dev/costco-cart.dev.user.js`, tick **Track external edits** in Violentmonkey and keep that tab open.
+- `bun dev/preview.ts [saved-cart.html]` builds `cart.preview.html` from a cart page you saved, with Costco's scripts removed and this script injected.
 
 Saved cart pages contain your personal data and are git-ignored.
 

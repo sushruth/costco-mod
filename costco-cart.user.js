@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Costco Cart, Cleaned Up
 // @namespace    https://github.com/sushruth/costco-mod
-// @version      0.3.0
+// @version      0.4.0
 // @description  Restyles the costco.com cart in place: compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.
 // @match        https://www.costco.com/CheckoutCartDisplayView*
 // @match        https://www.costco.com/CheckoutCartView*
@@ -14,6 +14,7 @@
 // @grant        GM_getResourceURL
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @license      MIT
 // @homepageURL  https://github.com/sushruth/costco-mod
 // @supportURL   https://github.com/sushruth/costco-mod/issues
@@ -22,806 +23,869 @@
 // ==/UserScript==
 
 (() => {
-  'use strict';
-
-  // ---- promo cache: everything stays in this browser (Violentmonkey storage, or localStorage in the preview) ----
-  const DAY = 864e5;
-  const kv = typeof GM_getValue === 'function'
-    ? { get: (k) => GM_getValue(k, null), set: (k, v) => GM_setValue(k, v) }
-    : { get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-  const toDate = (s) => { const [m, d, y] = s.split('/').map(Number); return new Date(y < 100 ? 2000 + y : y, m - 1, d, 23, 59, 59); };
-  // An entry expires a day after capture, or when its earliest promo ends, whichever comes first.
-  const promoCache = {
-    get(itemNo) {
-      const e = kv.get('cm-promo:' + itemNo);
-      return e && Date.now() < e.expires ? e : null;
-    },
-    set(itemNo, promos) {
-      const ends = promos.map((p) => p.until && toDate(p.until).getTime()).filter(Boolean);
-      kv.set('cm-promo:' + itemNo, { at: Date.now(), expires: Math.min(Date.now() + DAY, ...ends), promos });
-    },
-  };
-
-  // Reads multi-buy, spend-tier and bundle promos from a product page's visible text.
-  // ponytail: wording-based; Costco writes these by hand, so the cart cross-checks the sum against its own discount.
-  function parsePromos(html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    doc.querySelectorAll('script,style,noscript,template').forEach((n) => n.remove());
-    const t = (doc.body ? doc.body.textContent : '').replace(/\s+/g, ' ');
-    const num = (x) => +x.replace(/,/g, '');
-    const runs = [];
-    const collect = (re, type) => {
-      let run = null;
-      for (const m of t.matchAll(re)) {
-        if (run && m.index - run.end < 12) { run.tiers.push([num(m[1]), num(m[2])]); run.end = m.index + m[0].length; continue; }
-        if (run) runs.push(run);
-        run = { type, start: m.index, end: m.index + m[0].length, tiers: [[num(m[1]), num(m[2])]] };
-      }
-      if (run) runs.push(run);
-    };
-    collect(/(?:Buy|Purchase) (\d+)(?:\+| or more)? (?:qualifying [A-Za-z&' ]+?|Items?),? save \$([\d,]+)/gi, 'count');
-    collect(/Spend \$([\d,]+) Save \$([\d,]+)/g, 'spend');
-    const out = [];
-    for (const r of runs.filter((x) => x.tiers.length > 1)) {
-      const before = t.slice(Math.max(0, r.start - 220), r.start);
-      const brand = before.match(/qualifying ([A-Z][A-Za-z]+) (?:Home )?(?:Appliances|Products)/);
-      const name = r.type === 'spend' ? 'Appliance Spend & Save' : brand ? `${brand[1]} buy 2+` : /Costco Direct/.test(before) ? 'Costco Direct buy 2+' : 'Multi-buy';
-      const until = (t.slice(r.end, r.end + 300).match(/through (\d{1,2}\/\d{1,2}\/\d{2,4})/) || [])[1] || null;
-      const key = name + ':' + r.tiers.map((x) => x.join('-')).join(',');
-      if (!out.some((o) => o.key === key)) out.push({ key, name, type: r.type, tiers: r.tiers, until });
-    }
-    const b = t.match(/\$([\d,]+) BUNDLE SAVINGS WITH PURCHASE OF (.+?) AND (\w+)/i);
-    if (b) {
-      const partner = b[3].toLowerCase();
-      const until = (t.slice(b.index, b.index + 600).match(/through (\d{1,2}\/\d{1,2}\/\d{2,4})/) || [])[1] || null;
-      out.push({ key: 'bundle:' + partner, name: `Bundle with ${partner[0].toUpperCase() + partner.slice(1)} plan`, type: 'bundle', amount: num(b[1]), partner, until });
-    }
-    return { itemNo: (t.match(/Item (\d{5,8})\b/) || [])[1] || null, promos: out };
-  }
-
-  // Product pages: save this item's promos so the cart can explain its discount without fetching.
-  if (/^\/p\/|\.product\.\d+\.html/.test(location.pathname)) {
-    const r = parsePromos(document.documentElement.outerHTML);
-    if (r.itemNo) promoCache.set(r.itemNo, r.promos);
-    return;
-  }
-
-  if (!document.querySelector('#order-items') || !document.querySelector('#order-summary-column')) return;
-
-  const STORE_KEY = 'cm-off';
-  const $ = (s, r = document) => r.querySelector(s);
-  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const text = (n) => (n ? n.textContent.replace(/\s+/g, ' ').trim() : '');
-  const money = (s) => parseFloat(String(s).replace(/[^0-9.-]/g, '')) || 0;
-  const fmt = (n) => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmt0 = (n) => '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-  const shortDate = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
-  const longDate = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  const store = {
-    get: () => { try { return localStorage.getItem(STORE_KEY) === '1'; } catch { return false; } },
-    set: (v) => { try { v ? localStorage.setItem(STORE_KEY, '1') : localStorage.removeItem(STORE_KEY); } catch {} },
-  };
-
-  // Phosphor icons. Costco's CSP blocks CDN stylesheets but allows inline styles and data: fonts,
-  // so Violentmonkey fetches both @resources at install time and the font is inlined as a data URL.
-  function loadIcons() {
-    if (typeof GM_getResourceText === 'function') {
-      const css = GM_getResourceText('phCss').replace(/src:[\s\S]*?;/, `src: url("${GM_getResourceURL('phFont', false)}") format("woff2");`);
-      document.head.append(el('style', { id: 'cm-ph' }, css));
-    } else {
-      // Local preview: no GM API and no CSP, so the CDN stylesheet loads directly.
-      document.head.append(el('link', { rel: 'stylesheet', href: 'https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css' }));
-    }
-  }
-  const ic = (name, extra = '') => el('i', { class: `ph ph-${name} cm-ic ${extra}`, 'aria-hidden': 'true' });
-
-  const CSS = `
-html.cm-on {
-  --cm-blue:#005DAB; --cm-blue-dark:#004B87; --cm-blue-tint:#EFF7FB;
-  --cm-red:#E31837; --cm-green:#008000; --cm-amber:#8A6D3B; --cm-amber-tint:#FFF8E1;
-  --cm-ink:#333; --cm-ink-2:#5F5F5F; --cm-ink-3:#707070;
-  --cm-line:#E5E5E5; --cm-line-strong:#CCC; --cm-group:var(--cm-blue); --cm-surface-2:#FAFAFA; --cm-page:#F5F5F5;
-  --cm-card:0 0 5px rgba(0,0,0,.3);
-}
-html.cm-on #cart-body { background:var(--cm-page); padding-bottom:32px; }
-html.cm-on #cart-title { margin:16px 0 12px; }
-html.cm-on #cart-title-label { font-size:24px; line-height:30px; font-weight:400; color:var(--cm-ink); }
-html.cm-on #items-quantity-title { font-size:15px; color:var(--cm-ink-3); }
-html.cm-on .cm-hide, html.cm-on #cart-body .cm-hide { display:none !important; }
-html:not(.cm-on) #cart-body :is(.cm-ic, .cm-extra, .cm-svc-count, .cm-svc-toggle, .cm-date-chip, .cm-mode, #cm-promos) { display:none !important; }
-.cm-ic { font-size:18px; line-height:1; vertical-align:-3px; }
-
-/* ---- item list: each item is its own light card, 12px apart ---- */
-html.cm-on #order-items-regular { background:none; box-shadow:none; }
-html.cm-on #order-items .order-item { background:#fff; border:1px solid var(--cm-line); border-radius:4px; box-shadow:none;
-  padding:16px 20px !important; margin:0; font-size:13px; line-height:18px; color:var(--cm-ink); transition:background .3s; }
-html.cm-on #order-items-regular { display:flex; flex-direction:column; gap:12px; }
-/* an auto-added companion (the TV's Allstate plan) reads as a split of its parent card, like Services */
-html.cm-on #order-items .order-item.cm-child { background:var(--cm-surface-2); padding:10px 20px !important; margin-top:-12px; }
-/* one outline around the parent and its companion: they share a border and sit flush */
-html.cm-on #order-items .order-item.cm-parent { border-color:var(--cm-group); border-bottom:0; border-radius:4px 4px 0 0; box-shadow:0 0 0 1px var(--cm-group); }
-html.cm-on #order-items .order-item.cm-child { border-color:var(--cm-group); border-top-color:var(--cm-line); border-radius:0 0 4px 4px; box-shadow:0 0 0 1px var(--cm-group); clip-path:inset(0 -2px -2px -2px); }
-html.cm-on #order-items .order-item.cm-child .product-title a { font-size:14px; line-height:20px; }
-.cm-child-tag { display:flex; align-items:center; gap:6px; font-size:12px; line-height:16px; font-weight:600; color:var(--cm-ink); margin-bottom:2px; }
-html.cm-on #order-items .order-item.cm-flash { background:var(--cm-blue-tint); }
-html.cm-on #order-items hr, html.cm-on #order-items .divider-line, html.cm-on #order-items .member-only-msg { display:none; }
-
-/* details column: title, 4, meta, 8, price line, 12, actions */
-html.cm-on #order-items .order-item .item-thumbnail img { width:80px; height:80px; object-fit:contain; }
-html.cm-on #order-items .order-item .product-title[id^="product-name_"],
-html.cm-on #order-items .order-item .product-title a { font-size:16px; line-height:22px; font-weight:400; color:var(--cm-ink); }
-html.cm-on #order-items .order-item .product-title a { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-html.cm-on #order-items .order-item .product-title a:hover { color:var(--cm-blue); text-decoration:underline; }
-html.cm-on #order-items .order-item .product-warranty { font-size:12px; line-height:16px; color:var(--cm-ink-3); margin-top:0 !important;
-  display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-html.cm-on #order-items .order-item .number-status { display:inline; font-size:12px; color:var(--cm-ink-3); margin:0 !important; }
-html.cm-on #order-items .order-item .number-status .number { margin:0 !important; }
-html.cm-on #order-items .order-item .col-xs-9 { line-height:16px; }
-html.cm-on #order-items .order-item .col-xs-9 > .product-title { display:block; }
-html.cm-on #order-items .order-item .number-status .number { font-size:12px; color:var(--cm-ink-3); }
-html.cm-on #order-items .order-item .defining-attributes { display:inline; font-size:12px; color:var(--cm-ink-3); }
-html.cm-on #order-items .order-item .defining-attributes div { display:inline; }
-html.cm-on #order-items .order-item .defining-attributes div::before { content:"|"; margin:0 6px; color:var(--cm-line-strong); }
-html.cm-on #order-items .order-item .item-fsa:not(:has(*)) { display:none; }
-html.cm-on #order-items .order-item .item-description-prices { margin-top:8px; }
-html.cm-on #order-items .order-item .item-description-prices > .price { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; margin:0 !important; }
-html.cm-on #order-items .order-item .product-price .price { font-size:18px; line-height:24px; font-weight:700; color:var(--cm-ink); }
-html.cm-on #order-items .order-item .col-xs-8 > .product-title { font-size:12px; color:var(--cm-ink-3); }
-html.cm-on #order-items .order-item.cm-qty1 .total-price,
-html.cm-on #order-items .order-item.cm-qty1 [automation-id^="totalPriceOutput_"] { display:none; }
-
-/* price line extras */
-.cm-save { color:var(--cm-green); font-weight:700; white-space:nowrap; }
-.cm-when { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--cm-ink-3); white-space:nowrap; }
-.cm-when.cm-warn { color:var(--cm-amber); font-weight:600; }
-/* Costco's slanted badge, kept for the one thing that needs shouting */
-.cm-badge { display:inline-block; background:var(--cm-red); color:#fff; font-size:12px; line-height:16px; font-weight:600;
-  padding:2px 16px 2px 6px; border-radius:3px 3px 0 0; clip-path:polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); white-space:nowrap; }
-
-/* actions: stepper, then icon buttons, one row */
-html.cm-on #order-items .order-item .azure-entries { display:flex; flex-direction:column; }
-html.cm-on #order-items .order-item .azure-entries > .row:has(.quantity-selector-v2) { order:9; }
-html.cm-on #order-items .order-item .row > div:has(> .quantity-selector-v2) { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin-top:12px; }
-html.cm-on #order-items .order-item .item-quantity-validation-error { flex-basis:100%; order:3; }
-html.cm-on #order-items .order-item .item-quantity-validation-error:not(:has(.error:not(:empty))) { display:none; }
-html.cm-on #order-items .order-item .quantity-selector-v2 { height:28px; width:92px; border:1px solid var(--cm-line-strong); border-radius:4px; display:inline-flex; overflow:hidden; margin:0; }
-html.cm-on #order-items .order-item .quantity-selector-v2 button { width:28px; height:26px; min-height:0; border:0; background:#fff; color:var(--cm-blue); padding:0; }
-html.cm-on #order-items .order-item .quantity-selector-v2 button img { display:none; }
-html.cm-on #order-items .order-item .quantity-selector-v2 button .cm-ic { font-size:14px; vertical-align:0; }
-html.cm-on #order-items .order-item .quantity-selector-v2 input { width:34px; height:26px; border:0; font-size:13px; text-align:center; padding:0; }
-html.cm-on #order-items .order-item .remove-link { margin:0 !important; }
-html.cm-on #order-items .order-item .remove-link button,
-html.cm-on #order-items .order-item .wish-list button { font-size:0 !important; width:28px; height:28px; padding:0; border:0; background:none; color:var(--cm-ink-3); border-radius:4px; display:inline-flex; align-items:center; justify-content:center; }
-html.cm-on #order-items .order-item .remove-link button .cm-ic,
-html.cm-on #order-items .order-item .wish-list button .cm-ic { font-size:18px; vertical-align:-4px; vertical-align:0; }
-html.cm-on #order-items .order-item .remove-link button:hover { color:var(--cm-red); background:var(--cm-surface-2); }
-html.cm-on #order-items .order-item .wish-list button:hover { color:var(--cm-blue); background:var(--cm-surface-2); }
-html.cm-on #order-items .order-item .wish-list > span { display:none; }
-html.cm-on #order-items .order-item .wish-list { display:flex; gap:4px; margin:0; text-align:left; }
-
-/* ---- desktop item grid: [80 thumb | details] beside [delivery over price], services as a footer split ---- */
-@media (min-width:1025px) {
-  html.cm-on #order-items .order-item > .row { display:grid; grid-template-columns:minmax(0,1fr) 320px; grid-template-rows:auto 1fr auto; grid-template-areas:"main deliv" "main price" "svc svc"; column-gap:24px; margin:0; }
-  html.cm-on #order-items .order-item > .row::before, html.cm-on #order-items .order-item > .row::after { display:none; }
-  html.cm-on #order-items .order-item > .row > div { float:none; width:auto; margin-left:0; padding:0; min-width:0; }
-  html.cm-on #order-items .order-item > .row > [class*="col-xl-7"] { grid-area:main; position:relative; }
-  html.cm-on #order-items .order-item > .row > [class*="col-xl-5"]:not([class*="offset"]) { grid-area:deliv; position:relative; }
-  html.cm-on #order-items .order-item > .row > .col-xs-12:not([class*="col-xl"]):not(.cart-part-services):not(:has(.cart-part-services)) { grid-area:svc; }
-  html.cm-on #order-items .order-item > .row > div:has(.cart-part-services), html.cm-on #order-items .order-item > .row > .cart-part-services { grid-area:svc; }
-  html.cm-on #order-items .order-item.cm-email > .row { grid-template-areas:"main price" "main price" "svc svc"; }
-  html.cm-on #order-items .order-item.cm-email > .row > [class*="col-xl-5"]:not([class*="offset"]) { display:none; }
-  html.cm-on #order-items .order-item .azure-entries > .row { margin-left:0; margin-right:0; }
-  /* thumbnail floats out of flow so its 80px height doesn't push the actions row down */
-  html.cm-on #order-items .order-item .azure-entries { position:static; min-height:80px; }
-  html.cm-on #order-items .order-item .azure-entries [class*="col-"] { min-height:0; }
-  html.cm-on #order-items .order-item .azure-entries > .row > .item-thumbnail { width:80px; padding:0; position:absolute; top:0; left:0; }
-  html.cm-on #order-items .order-item .linked-item { margin-bottom:0; }
-  html.cm-on #order-items .order-item .azure-entries > .row > .item-thumbnail + .col-xs-9 { width:calc(100% - 96px); margin-left:96px; padding:0; position:static; }
-  /* price is moved into its own grid cell under delivery, bottom-right, level with the actions row */
-  /* price is anchored to the bottom-right of the item column, level with the actions row */
-  html.cm-on #order-items .order-item > .row > .cm-price-slot { grid-area:price; align-self:end; justify-self:end; margin-top:4px; }
-  html.cm-on #order-items .order-item .cm-price-slot .item-description-prices { margin:0; }
-  html.cm-on #order-items .order-item .cm-price-slot .item-description-prices > .price { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:0 10px; text-align:right; }
-  html.cm-on #order-items .order-item .cm-price-slot .product-price { flex-basis:100%; text-align:right; }
-  html.cm-on #order-items .order-item .azure-entries > .row > [class*="col-xl-offset-3"] { margin-left:96px; padding:0; width:calc(100% - 96px); }
-  html.cm-on #order-items .order-item > .row > [class*="col-xl-5"] .row { margin:0; }
-  html.cm-on #order-items .order-item > .row > [class*="col-xl-5"] [class*="col-"] { padding:0; margin-left:0; }
-}
-
-/* ---- delivery column: icon + mode, one outlined date field, no boxes ---- */
-html.cm-on .delivery-options .selection-item:not(.cart-calendar-box) { border:0 !important; border-radius:0 !important; box-shadow:none !important;
-  background:none !important; padding:0 !important; margin:0 !important; min-height:0 !important; }
-html.cm-on .delivery-options, html.cm-on .delivery-options .selection-box-v3 { margin-bottom:0 !important; }
-html.cm-on .delivery-options .selection-box-v3 { padding:0 !important; border:0 !important; background:none !important; }
-html.cm-on .delivery-options .ship-type-and-cost { display:flex; align-items:center; gap:6px; font-size:13px; line-height:18px; font-weight:600; color:var(--cm-ink); }
-html.cm-on .estimated-delivery-date-div, html.cm-on .estimated-delivery-date-div * { font-size:12px !important; line-height:16px; margin:2px 0 0; }
-/* the date is a chip on the label's line; Costco's input stays on top of it, invisible, so a click still opens Costco's picker */
-html.cm-on .delivery-options label.selection-item:has(.cart-calendar-box) { display:flex !important; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:4px 0; }
-/* split chip: [mode | date] as one pill */
-html.cm-on .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost { height:28px; box-sizing:border-box; padding:0 8px 0 10px;
-  background:var(--cm-surface-2); border:1px solid var(--cm-line-strong); border-right:0; border-radius:14px 0 0 14px; font-size:0 !important; gap:0; }
-html.cm-on .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost > :not(.cm-ic) { display:none !important; }
-html.cm-on .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost > .cm-ic { font-size:18px; }
-/* a later-than-earliest pick shows Costco's "Earliest Delivery" note as one small line under the chip */
-html.cm-on #order-items .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div { order:9; flex-basis:100%; text-align:right; margin:0 !important; }
-html.cm-on #order-items .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div * { display:inline !important; font-size:12px !important; line-height:16px !important; font-weight:400 !important; color:var(--cm-ink-3) !important; margin:0 !important; }
-html.cm-on #order-items .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div > :first-child::after { content:": "; }
-html.cm-on .delivery-options label.selection-item:has(.cart-calendar-box) > .cart-delivery-details-link { order:-1; margin-right:6px !important; flex:none; }
-/* delivery options hug the right edge, so the chip lines up with the price under it */
-html.cm-on #order-items .delivery-options label.selection-item { width:fit-content !important; margin-left:auto !important; }
-/* with a pickup choice the options move as one block, so both radio dots share a left edge */
-html.cm-on #order-items .delivery-options:has(.warehouse_pickup) { width:fit-content; margin-left:auto !important; }
-html.cm-on #order-items .delivery-options:has(.warehouse_pickup) label.selection-item { width:auto !important; margin-left:0 !important; }
-html.cm-on #order-items .delivery-options:has(.warehouse_pickup) label.selection-item:has(.cart-calendar-box)::before { top:50% !important; transform:translateY(-50%); }
-/* delivery vs pick-up: a two-part toggle stands in for Costco's radios; only the chosen option shows */
-html.cm-on #order-items .delivery-options.cm-has-mode { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
-html.cm-on #order-items .delivery-options.cm-has-mode label.selection-item { padding-left:0 !important; }
-html.cm-on #order-items .delivery-options.cm-has-mode label.selection-item::before { content:none !important; }
-html.cm-on #order-items .delivery-options.cm-has-mode .cm-opt:not(.cm-opt-on) { display:none !important; }
-html.cm-on #order-items .delivery-options.cm-has-mode label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost { display:none !important; }
-html.cm-on #order-items .delivery-options.cm-has-mode .cm-date-chip { border-radius:14px; }
-.cm-mode { display:inline-flex; flex-wrap:wrap; max-width:100%; min-height:28px; border:1px solid var(--cm-line-strong); border-radius:14px; overflow:hidden; }
-.cm-mode-btn { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 10px; white-space:nowrap; border:0; background:#fff; color:var(--cm-ink-3); font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
-.cm-mode-btn + .cm-mode-btn { border-left:1px solid var(--cm-line-strong); }
-.cm-mode-btn .cm-ic { font-size:16px; }
-.cm-mode-btn[aria-pressed="true"] { background:var(--cm-blue); color:#fff; }
-.cm-mode-btn:focus-visible { outline:2px solid var(--cm-blue); outline-offset:-2px; }
-html.cm-on .cart-calendar-box { border:0 !important; background:none !important; box-shadow:none !important; padding:0 !important; margin:0 !important; display:block; }
-html.cm-on .cart-calendar-box [id^="calendarWrap"] { position:relative; display:inline-flex; }
-html.cm-on .cart-calendar-box input.date-input { position:absolute !important; inset:0; width:100% !important; height:100% !important; opacity:0; cursor:pointer; padding:0; border:0; z-index:1; }
-.cm-date-chip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px 0 8px; border:1px solid var(--cm-line-strong); border-radius:0 14px 14px 0; background:#fff;
-  font-size:13px; line-height:18px; font-weight:600; color:var(--cm-blue); white-space:nowrap; }
-.cm-date-chip .cm-ic { font-size:15px; margin-right:2px; }
-html.cm-on #order-items .cm-date-chip > span { display:inline !important; line-height:26px !important; }
-html.cm-on #order-items .cart-delivery-details-link span:not(.cm-ic) { display:none !important; }
-html.cm-on .cart-calendar-box [id^="calendarWrap"]:hover .cm-date-chip { background:var(--cm-blue-tint); border-color:var(--cm-blue); }
-html.cm-on .cart-calendar-box input.date-input:focus-visible + .cm-date-chip { outline:2px solid var(--cm-blue); outline-offset:2px; }
-html.cm-on .cart-calendar-box .cart-calendar-text { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-html.cm-on .cart-calendar-box .co-calendar { display:none; }
-html.cm-on .cart-calendar-box .cm-cal { display:none; }
-html.cm-on .cart-calendar-box label { position:relative; display:block; margin:0; }
-/* the details link becomes an info icon at the top-right of the column */
-html.cm-on .cart-delivery-details-link { display:inline-flex; margin:0 !important; }
-html.cm-on .cart-delivery-details-link > a, html.cm-on .cart-delivery-details-link > button { font-size:0 !important; display:inline-block; text-align:center;
-  width:24px; height:24px; padding:0 !important; margin:0 !important; color:var(--cm-blue); background:none; border:0; }
-html.cm-on .cart-delivery-details-link .cm-ic { font-size:18px; line-height:24px; }
-/* several ship options: a radio dot shows the chosen one, since the boxes are gone */
-html.cm-on .delivery-options:has(.warehouse_pickup) label.selection-item:not(.cart-calendar-box) { position:relative; padding-left:20px !important; cursor:pointer; }
-html.cm-on .delivery-options:has(.warehouse_pickup) label.selection-item:not(.cart-calendar-box)::before { content:""; position:absolute; left:0; top:3px;
-  width:12px; height:12px; border-radius:50%; border:1.5px solid var(--cm-line-strong); background:#fff; box-sizing:border-box; }
-html.cm-on .delivery-options:has(.warehouse_pickup) input:checked + label.selection-item::before { border:4px solid var(--cm-blue); }
-html.cm-on .warehouse_pickup { margin-top:10px; }
-html.cm-on .warehouse_pickup .selection-item, html.cm-on .warehouse_pickup .selection-item * { font-size:12px !important; line-height:16px !important; margin:0 !important; color:var(--cm-ink-2); }
-html.cm-on .warehouse_pickup .warehouse_pickup_address_lines { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-html.cm-on .warehouse_pickup input:not(:checked) + label .warehouse-pickup-address-v2 > div:not(.warehouse_pickup_address_lines) { display:none !important; }
-html.cm-on .warehouse_pickup .cart-delivery-details-button { color:var(--cm-blue) !important; padding:0; background:none; border:0; }
-html.cm-on .a11y-tooltip .co-help { display:none; }
-html.cm-on .a11y-tooltip .cm-ic { font-size:15px; color:var(--cm-blue); vertical-align:-2px; }
-
-/* ---- services: a footer split under the item ---- */
-html.cm-on #order-items .order-item .cart-part-services:not(.hidden) { display:block; border-radius:0 0 3px 3px; background:var(--cm-surface-2); border-top:1px solid var(--cm-line);
-  margin:8px -20px -16px !important; padding:10px 20px !important; width:auto !important; float:none; }
-html.cm-on #order-items .order-item .cart-part-services .row, html.cm-on #order-items .order-item .cart-part-services [class*="col-"],
-html.cm-on #order-items .order-item .cart-part-services .container-fluid { margin:0 !important; padding:0 !important; float:none; width:auto; }
-html.cm-on .cart-part-services .delivery-services-main { background:none !important; border:0 !important; font-size:12px; line-height:16px; }
-html.cm-on .cart-part-services h3 { margin:0 !important; display:flex; align-items:center; gap:8px; font-size:13px; line-height:18px; }
-html.cm-on .cart-part-services [id^="edd-delivery-services-container"] { margin-top:0 !important; padding-top:0 !important; }
-html.cm-on .cart-part-services [id^="edd-delivery-services-container"] > :first-child { margin-top:0 !important; }
-html.cm-on .cart-part-services h3 label.parts-bold { margin:0; font-size:13px !important; line-height:18px !important; font-weight:600; display:inline-flex; align-items:center; gap:6px; }
-html.cm-on .cart-part-services .delivery-services-notification { background:none; border:0; padding:0; margin:4px 0 0; color:var(--cm-amber); }
-html.cm-on .cart-part-services .delivery-services-notification * { font-size:12px !important; line-height:16px !important; padding:0 !important; }
-html.cm-on .cart-part-services .delivery-services-notification img { display:none; }
-html.cm-on .cart-part-services .delivery-services-notification .cm-ic { font-size:14px; margin-right:6px; vertical-align:-2px; }
-html.cm-on #order-items .cart-part-services.cm-collapsed ul.edd-delivery-services, html.cm-on #order-items .cart-part-services.cm-collapsed .parts-types-bold { display:none !important; }
-html.cm-on .cart-part-services:not(.cm-collapsed) ul.edd-delivery-services { margin:2px 0 6px; padding:0; list-style:none; max-width:72ch; }
-html.cm-on #order-items .cart-part-services .parts-types-bold { display:block; margin:8px 0 0 !important; font-size:12px !important; line-height:16px !important; font-weight:600; color:var(--cm-ink-3); }
-html.cm-on .cart-part-services ul.edd-delivery-services li { display:flex; gap:6px; margin:2px 0; font-size:13px; line-height:18px; color:var(--cm-ink); }
-html.cm-on #order-items .cart-part-services ul.edd-delivery-services li .add-cart-list-detail { font-size:13px !important; line-height:18px !important; margin:0 !important; padding:0 !important; }
-html.cm-on .cart-part-services ul.edd-delivery-services li > .add-cart-list-cell:first-child { flex:none; display:flex; padding-top:2px; }
-html.cm-on .cart-part-services img.parts-services-tick { display:none; }
-html.cm-on .cart-part-services .add-cart-list-cell > .ph-check { color:var(--cm-green); font-size:14px; }
-html.cm-on .cart-part-services .add-cart-list-cell > .ph-info { color:var(--cm-ink-3); font-size:14px; }
-.cm-svc-count { font-weight:400; color:var(--cm-ink-3); }
-.cm-svc-toggle { font:inherit; font-size:13px; color:var(--cm-blue); background:none; border:0; padding:0; cursor:pointer; display:inline-flex; align-items:center; gap:2px; }
-.cm-svc-toggle .cm-ic { font-size:14px; vertical-align:0; }
-
-/* ---- side panel: our review rows, then Costco's totals and Checkout, one card ---- */
-html.cm-on #order-summary-column { transform:none !important; }
-html.cm-on #order-summary-column .e-spot-cart-body { display:none; }
-@media (min-width:1025px) { html.cm-on [role="region"][aria-label="Checkout"] { position:sticky; top:16px; } }
-#cm-review { display:none; }
-html.cm-on #cm-review { display:block; background:#fff; border-radius:4px 4px 0 0; box-shadow:var(--cm-card); clip-path:inset(-6px -6px 0 -6px);
-  color:var(--cm-ink); font-size:13px; line-height:18px; }
-html.cm-on #order-summary-body { border:0 !important; border-radius:0 0 4px 4px; background:#fff !important; box-shadow:var(--cm-card); clip-path:inset(0 -6px -6px -6px);
-  margin-top:0 !important; padding:4px 20px 16px !important; }
-.cm-head { padding:14px 20px 10px; font-size:13px; line-height:18px; font-weight:600; }
-.cm-head span { font-weight:400; color:var(--cm-ink-3); }
-.cm-strip { margin:0 20px 6px; padding:6px 10px; border-radius:4px; font-size:12px; line-height:16px; display:flex; gap:6px; align-items:flex-start; }
-.cm-strip .cm-ic { font-size:14px; vertical-align:0; margin-top:1px; }
-.cm-strip.cm-warn { background:var(--cm-amber-tint); color:var(--cm-amber); }
-.cm-strip.cm-ok { background:var(--cm-blue-tint); color:var(--cm-blue-dark); }
-.cm-rows { list-style:none; margin:0; padding:0; }
-.cm-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:8px 20px; cursor:pointer; border-top:1px solid var(--cm-line); }
-.cm-row:first-child { border-top:0; }
-.cm-row:hover { background:var(--cm-surface-2); }
-.cm-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cm-name a { color:var(--cm-ink); text-decoration:none; }
-.cm-name a:hover { color:var(--cm-blue); text-decoration:underline; }
-.cm-price { font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
-.cm-meta { font-size:12px; line-height:16px; color:var(--cm-ink-3); display:flex; gap:10px; flex-wrap:wrap; }
-.cm-meta > span { display:inline-flex; align-items:center; gap:3px; }
-.cm-meta .cm-ic { font-size:13px; vertical-align:0; }
-.cm-meta .cm-urgent { color:var(--cm-red); font-weight:700; }
-.cm-meta .cm-warn { color:var(--cm-amber); font-weight:600; }
-.cm-row .cm-save { font-size:12px; text-align:right; font-weight:400; }
-.cm-foot { display:flex; padding:10px 20px; gap:8px; align-items:center; white-space:nowrap; border-top:1px solid var(--cm-line); }
-.cm-btn { font:inherit; font-size:13px; font-weight:600; height:30px; padding:0 10px; border-radius:4px; border:1px solid var(--cm-blue); background:#fff; color:var(--cm-blue);
-  cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
-.cm-btn:hover { background:var(--cm-blue-tint); }
-.cm-btn .cm-ic { font-size:16px; vertical-align:0; }
-.cm-icon-btn { width:30px; padding:0; justify-content:center; border-color:var(--cm-line-strong); color:var(--cm-ink-2); }
-.cm-link { font:inherit; font-size:12px; background:none; border:0; padding:0; color:var(--cm-ink-3); cursor:pointer; text-decoration:underline; margin-left:auto; }
-.cm-pre { display:none; margin:0 20px 12px; padding:10px; background:var(--cm-surface-2); border-radius:4px; font-size:11px; line-height:15px; white-space:pre-wrap; max-height:220px; overflow:auto; }
-.cm-pre.cm-open { display:block; }
-#cm-promos { clear:both; margin:2px 0 8px; padding-left:12px; border-left:2px solid var(--cm-line); font-size:12px; line-height:18px; color:var(--cm-ink-3); }
-.cm-promo { display:flex; justify-content:space-between; gap:8px; }
-.cm-promo > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--cm-ink); }
-.cm-promo > span:last-child { color:var(--cm-green); white-space:nowrap; }
-.cm-promo-items { color:var(--cm-ink-3); }
-.cm-promo-ok, .cm-promo-gap, .cm-promo-missing { display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-top:2px; }
-.cm-promo-gap { color:var(--cm-amber); font-weight:600; }
-.cm-promo-missing .cm-link { font-size:12px; margin-left:0; color:var(--cm-blue); }
-.cm-strip-list { align-items:flex-start; }
-.cm-strip-row { font-weight:400; }
-.cm-strip-row b { font-weight:600; }
-.cm-savings { display:flex; justify-content:space-between; padding:10px 20px 0; border-top:1px solid var(--cm-line); color:var(--cm-green); font-size:14px; line-height:20px; }
-html.cm-on #order-summary-body .summary-left, html.cm-on #order-summary-body .summary-right,
-html.cm-on #order-summary-body .order-estimated, html.cm-on #order-summary-body .order-estimated * { font-size:14px !important; line-height:20px !important; margin-bottom:6px !important; }
-html.cm-on #order-summary-body .estimated-total-label, html.cm-on #order-estimated-total { font-size:18px !important; line-height:24px !important; font-weight:700 !important; }
-html.cm-on #order-summary-body .order-summary-text-info { font-size:12px; color:var(--cm-ink-3); margin:2px 0 12px; }
-html.cm-on #order-summary-body .divider-line { margin:8px 0 10px; border-color:var(--cm-line); }
-html.cm-on #order-estimated-zip { width:75%; }
-html.cm-on #order-estimated-shipping { width:25%; text-align:right; }
-html.cm-on #shopCartCheckoutSubmitButton { width:100%; height:44px; border-radius:4px; font-weight:600; }
-.cm-btn:focus-visible, .cm-link:focus-visible, .cm-svc-toggle:focus-visible, .cm-row:focus-visible { outline:2px solid var(--cm-blue); outline-offset:2px; }
-#cm-restore { position:fixed; right:16px; bottom:16px; z-index:9999; font:600 13px/1 system-ui, sans-serif; padding:10px 14px; border-radius:4px;
-  border:0; background:#005DAB; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.2); cursor:pointer; }
-html.cm-on #cm-restore { display:none; }
-#cm-redline-btn { position:fixed; left:16px; bottom:16px; z-index:9999; display:inline-flex; align-items:center; gap:6px; font:600 12px/1 system-ui, sans-serif;
-  padding:8px 12px; border-radius:4px; border:1px solid #E31837; background:#fff; color:#E31837; cursor:pointer; box-shadow:0 0 5px rgba(0,0,0,.3); }
-#cm-redline-btn[aria-pressed="true"] { background:#E31837; color:#fff; }
-
-/* ---- mobile + tablet: Costco's own stacking, plus a checkout bar ---- */
-#cm-bar { display:none; }
-@media (max-width:1024px) {
-  html.cm-on #order-items .order-item > .row { display:flex; flex-direction:column; }
-  html.cm-on #order-items .order-item > .row > [class*="col-xl-7"] { order:-2; }
-  html.cm-on #order-items .order-item > .row > .cm-price-slot { order:-1; padding:0 15px 0 calc(25% + 15px); }
-  html.cm-on #cart-body { padding-bottom:96px; }
-  html.cm-on #order-items .order-item .cart-part-services:not(.hidden) { padding-left:20px !important; }
-  html.cm-on #cm-bar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:1000; background:#fff; border-top:1px solid var(--cm-line);
-    box-shadow:0 -2px 8px rgba(0,0,0,.08); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); align-items:center; justify-content:space-between; gap:12px; }
-  #cm-bar .cm-bar-label { font-size:12px; color:var(--cm-ink-3); }
-  #cm-bar .cm-bar-total { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
-  #cm-bar .cm-bar-alert { font-size:12px; color:var(--cm-red); font-weight:600; background:none; border:0; padding:0; }
-  #cm-bar .cm-bar-go { height:44px; padding:0 24px; border-radius:4px; border:0; background:var(--cm-green); color:#fff; font-weight:600; font-size:16px; }
-}
-`;
-
-  const SAME_DAY = /required to ship on the same day/i;
-
-  const el = (tag, attrs = {}, ...kids) => {
+  // src/core/dom.ts
+  var $ = (s, r = document) => r.querySelector(s);
+  var $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  var text = (n) => n ? (n.textContent ?? "").replace(/\s+/g, " ").trim() : "";
+  function el(tag, attrs = {}, ...kids) {
     const n = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs)) k === 'class' ? (n.className = v) : n.setAttribute(k, v);
-    for (const k of kids.flat()) if (k != null && k !== false && k !== '') n.append(k.nodeType ? k : String(k));
+    n.dataset.cm = "";
+    for (const [k, v] of Object.entries(attrs))
+      k === "class" ? n.className = v : n.setAttribute(k, v);
+    for (const k of kids.flat())
+      if (k != null && k !== false && k !== "")
+        n.append(typeof k === "object" ? k : String(k));
     return n;
-  };
+  }
+  var ic = (name, extra = "") => el("i", { class: `ph ph-${name} cm-ic ${extra}`, "aria-hidden": "true" });
+  function addIcon(node, name, where = "prepend") {
+    if (!node)
+      return;
+    if (!node.title)
+      node.title = text(node);
+    if (!$(":scope > .cm-ic", node))
+      node[where](ic(name));
+  }
+  var addStyle = (id, css) => document.head.append(el("style", { id }, css));
+  function loadIcons() {
+    if (typeof GM_getResourceText === "function") {
+      const css = GM_getResourceText("phCss").replace(/src:[\s\S]*?;/, `src: url("${GM_getResourceURL("phFont", false)}") format("woff2");`);
+      addStyle("cm-ph", css);
+    } else {
+      document.head.append(el("link", { rel: "stylesheet", href: "https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" }));
+    }
+  }
+  async function copy(str) {
+    try {
+      await navigator.clipboard.writeText(str);
+      return true;
+    } catch {}
+    const ta = el("textarea", { style: "position:fixed;opacity:0" });
+    ta.value = str;
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }
 
+  // src/core/format.ts
+  var DAY = 86400000;
+  var money = (s) => parseFloat(String(s).replace(/[^0-9.-]/g, "")) || 0;
+  var fmt = (n) => (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var fmt0 = (n) => "$" + Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  var shortDate = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+  var longDate = (d) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  function toDate(s) {
+    const [m, d, y] = s.split("/").map(Number);
+    return new Date(y < 100 ? 2000 + y : y, m - 1, d, 23, 59, 59);
+  }
+  var KINDS = ["microwave", "refrigerator", "freezer", "dishwasher", "washer", "dryer", "cooktop", "range", "oven", "TV"];
+  var shortName = (n) => KINDS.find((w) => new RegExp(`\\b${w}\\b`, "i").test(n)) || n.split(/\s+/).slice(0, 3).join(" ");
+  function urgency(days) {
+    if (days == null || days > 7)
+      return null;
+    if (days < 0)
+      return { cls: "cm-urgent", label: "Promo ended" };
+    if (days <= 1)
+      return { cls: "cm-urgent", label: days === 0 ? "Ends today" : "Ends tomorrow" };
+    return { cls: "cm-warn", label: `Ends in ${days} days` };
+  }
+
+  // src/core/items.ts
+  var SAME_DAY = /required to ship on the same day/i;
   function readItems() {
     const dateMap = {};
-    const raw = ($('[name="calendarItemSelectedDate"]') || {}).value || '';
+    const raw = $('[name="calendarItemSelectedDate"]')?.value ?? "";
     for (const m of raw.matchAll(/scheduler_picker_(\d+)_\d+_(\w+)\|(\d{4}-\d{2}-\d{2})/g)) {
-      // ponytail: pickup (LPU) entries can come first; any delivery mode replaces them.
-      if (!dateMap[m[1]] || dateMap[m[1]].mode === 'LPU') dateMap[m[1]] = { mode: m[2], date: m[3] };
+      if (!dateMap[m[1]] || dateMap[m[1]].mode === "LPU")
+        dateMap[m[1]] = { mode: m[2], date: m[3] };
     }
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-
-    return $$('#order-items .order-item').map((card) => {
-      const idEl = $('[data-orderitemid]', card);
-      const orderItemId = idEl ? idEl.dataset.orderitemid : '';
-      const itemNo = ($('[data-orderitemnumber]', card) || { dataset: {} }).dataset.orderitemnumber || '';
-      const link = $('.product-title a', card);
-      const priceEl = $('.product-price .price', card);
-      const promo = text($('.h8-style-guide-green', card));
-      const save = money((promo.match(/\$([\d,.]+) savings/i) || [])[1] || 0);
+    const today = new Date;
+    today.setHours(0, 0, 0, 0);
+    return $$("#order-items .order-item").map((card) => {
+      const orderItemId = $("[data-orderitemid]", card)?.dataset.orderitemid ?? "";
+      const itemNo = $("[data-orderitemnumber]", card)?.dataset.orderitemnumber ?? "";
+      const link = $(".product-title a", card);
+      const priceEl = $(".product-price .price", card);
+      const promo = text($(".h8-style-guide-green", card));
+      const save = money(promo.match(/\$([\d,.]+) savings/i)?.[1] ?? 0);
       const endM = promo.match(/through (\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
       let end = null, days = null;
       if (endM) {
         end = new Date(+endM[3] < 100 ? 2000 + +endM[3] : +endM[3], +endM[1] - 1, +endM[2]);
-        days = Math.round((end - today) / 864e5);
+        days = Math.round((end.getTime() - today.getTime()) / DAY);
       }
-      const dateInput = $('input.date-input', card);
+      const dateInput = $("input.date-input", card);
       let deliv = null;
-      if (dateMap[orderItemId]) deliv = new Date(dateMap[orderItemId].date + 'T00:00:00');
-      else if (dateInput && dateInput.value && !isNaN(Date.parse(dateInput.value))) deliv = new Date(dateInput.value);
+      if (dateMap[orderItemId])
+        deliv = new Date(dateMap[orderItemId].date + "T00:00:00");
+      else if (dateInput?.value && !isNaN(Date.parse(dateInput.value)))
+        deliv = new Date(dateInput.value);
       const qtyEl = $('input[id^="quantity_"]', card);
       return {
-        card, orderItemId, itemNo,
-        name: text(link) || text($('.product-title', card)),
-        href: link ? link.href : '',
-        price: priceEl ? money(priceEl.firstChild ? priceEl.firstChild.textContent : priceEl.textContent) : 0,
+        card,
+        orderItemId,
+        itemNo,
+        name: text(link) || text($(".product-title", card)),
+        href: link?.href ?? "",
+        price: priceEl ? money(priceEl.firstChild?.textContent ?? priceEl.textContent) : 0,
         qty: qtyEl ? parseInt(qtyEl.value, 10) || 1 : 1,
-        save, end, days, deliv,
-        shipsTogether: $$('.ltl-warning-text, .cart-informational.warning', card).some((n) => SAME_DAY.test(n.textContent)),
-        email: /delivery via email/i.test(text($('.ship-type-and-cost', card))),
-        autoadd: /autoadd/i.test(($('[name="controllingAttributes"]', card) || {}).value || ''),
+        save,
+        end,
+        days,
+        deliv,
+        shipsTogether: $$(".ltl-warning-text, .cart-informational.warning", card).some((n) => SAME_DAY.test(n.textContent ?? "")),
+        email: /delivery via email/i.test(text($(".ship-type-and-cost", card))),
+        autoadd: /autoadd/i.test($('[name="controllingAttributes"]', card)?.value ?? "")
       };
     });
   }
 
-  // An "autoadd" item's companion (e.g. the TV's Allstate plan) is the order item created right after it.
-  // ponytail: id+1 heuristic; the product page's ACCESSORY association is exact but costs a fetch per load.
-  function linkAutoAdds(items) {
-    const out = [];
-    for (const it of items) if (!it.parent) {
-      out.push(it);
-      const kid = it.autoadd && items.find((k) => +k.orderItemId === +it.orderItemId + 1);
-      if (kid) { kid.parent = it; out.push(kid); }
+  // src/core/store.ts
+  var kv = typeof GM_getValue === "function" ? { get: (k) => GM_getValue(k, null), set: (k, v) => GM_setValue(k, v) } : {
+    get: (k) => {
+      try {
+        return JSON.parse(localStorage.getItem(k) ?? "null");
+      } catch {
+        return null;
+      }
+    },
+    set: (k, v) => {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+      } catch {}
     }
+  };
+  var flag = {
+    get: (k) => {
+      try {
+        return localStorage.getItem(k) === "1";
+      } catch {
+        return false;
+      }
+    },
+    set: (k, on) => {
+      try {
+        on ? localStorage.setItem(k, "1") : localStorage.removeItem(k);
+      } catch {}
+    }
+  };
+
+  // src/plugins/cards/index.ts
+  function priceLine(it) {
+    const c = it.card;
+    const promoEl = $(".h8-style-guide-green", c);
+    if (promoEl && (it.save || it.end))
+      promoEl.classList.add("cm-hide");
+    const u = urgency(it.days);
+    const extras = [];
+    if (it.save)
+      extras.push(el("span", { class: "cm-save cm-extra" }, "Save ", el("b", {}, fmt0(it.save))));
+    if (it.end && u?.cls === "cm-urgent")
+      extras.push(el("span", { class: "cm-badge cm-extra" }, `${u.label} · ${shortDate(it.end)}`));
+    else if (it.end)
+      extras.push(el("span", { class: `cm-when cm-extra ${u ? u.cls : ""}` }, ic("timer"), u ? `${u.label} · ${shortDate(it.end)}` : `Ends ${shortDate(it.end)}`));
+    if (it.email)
+      extras.push(el("span", { class: "cm-when cm-extra" }, ic("envelope-simple"), "Delivered by email"));
+    const priceRow = $(".item-description-prices > .price", c);
+    if (priceRow)
+      priceRow.append(...extras);
+    else
+      $(".product-title", c)?.after(el("div", { class: "cm-extra" }, ...extras));
+  }
+  function actions(c) {
+    addIcon($(".remove-link button", c), "trash");
+    const wl = $$(".wish-list button", c);
+    addIcon(wl[0], "list-plus");
+    addIcon(wl[1], "bookmark-simple");
+    if (wl[1] && !wl[1].getAttribute("aria-label"))
+      wl[1].setAttribute("aria-label", "Save for Later");
+    const stepRow = $(".quantity-selector-v2", c)?.parentElement, wlBox = $(".wish-list", c);
+    if (stepRow && wlBox && wlBox.parentElement !== stepRow) {
+      wlBox.parentElement?.classList.add("cm-hide");
+      stepRow.append(wlBox);
+    }
+    addIcon($('.quantity-selector-v2 button[id^="sub-"]', c), "minus");
+    addIcon($('.quantity-selector-v2 button[id^="add-"]', c), "plus");
+    $$(".a11y-tooltip", c).forEach((b) => addIcon(b, "info"));
+  }
+  function decorate(it) {
+    const c = it.card;
+    const row = $(":scope > .row", c), priceBox = $(".item-description-prices", c)?.parentElement;
+    if (row && priceBox && priceBox.parentElement !== row) {
+      priceBox.classList.add("cm-price-slot");
+      row.append(priceBox);
+    }
+    c.classList.toggle("cm-qty1", it.qty === 1);
+    c.classList.toggle("cm-email", it.email);
+    $$('.ltl-container, [id^="item_level_message_"]', c).forEach((n) => {
+      if (SAME_DAY.test(n.textContent ?? ""))
+        n.classList.add("cm-hide");
+    });
+    $$(".shipping-cost", c).forEach((s) => s.classList.toggle("cm-hide", /included/i.test(s.textContent ?? "")));
+    priceLine(it);
+    actions(c);
+  }
+  var cards = {
+    id: "cards",
+    name: "Compact item cards",
+    render: (ctx) => ctx.items.forEach(decorate)
+  };
+
+  // src/plugins/delivery/delivery.module.css
+  var delivery_module_default = {
+    mode: "mode_ZVEnOQ",
+    modeBtn: "modeBtn_ZVEnOQ",
+    "cm-ic": "cm-ic_ZVEnOQ",
+    chip: "chip_ZVEnOQ",
+    "date-input": "date-input_ZVEnOQ",
+    "cm-has-mode": "cm-has-mode_ZVEnOQ"
+  };
+
+  // src/plugins/delivery/index.ts
+  var label = (d) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  function modeToggle(opts, ctx) {
+    const radios = $$('input.shipModeId[type="radio"]', opts);
+    if (radios.length < 2)
+      return;
+    const block = (r) => r.closest(".individualShipBlock, .warehouse_pickup") ?? r.parentElement;
+    const name = (r) => {
+      const l = opts.querySelector(`label[for="${r.id}"]`) ?? block(r);
+      return (text($(".ship-type-and-cost", l)) || text(l)).split(/[:(]/)[0].trim() || "Option";
+    };
+    const icon = (r, n) => /pick-?up|warehouse/i.test(r.id + n) ? "storefront" : /mail/i.test(n) ? "envelope-simple" : "truck";
+    let tog = $(`:scope > .${delivery_module_default.mode}`, opts);
+    if (!tog || tog.children.length !== radios.length) {
+      tog?.remove();
+      tog = el("div", { class: delivery_module_default.mode, role: "group", "aria-label": "Delivery options" }, ...radios.map((r) => {
+        const n = name(r);
+        const b = el("button", { type: "button", class: delivery_module_default.modeBtn, title: n }, ic(icon(r, n)), n);
+        b.addEventListener("click", () => {
+          if (!r.checked)
+            r.click();
+          ctx.render();
+        });
+        return b;
+      }));
+      opts.prepend(tog);
+    }
+    opts.classList.add("cm-has-mode");
+    radios.forEach((r, i) => {
+      block(r).classList.add("cm-opt");
+      block(r).classList.toggle("cm-opt-on", r.checked);
+      tog.children[i].setAttribute("aria-pressed", String(r.checked));
+    });
+  }
+  function dateChips(c, ctx) {
+    $$(".cart-calendar-box input.date-input", c).forEach((inp) => {
+      const d = new Date(inp.value);
+      const txt = isNaN(d.getTime()) ? inp.value : label(d);
+      const chip = $(`:scope > .${delivery_module_default.chip}`, inp.parentElement);
+      if (chip)
+        chip.lastChild.textContent = txt;
+      else {
+        inp.after(el("span", { class: delivery_module_default.chip, "aria-hidden": "true" }, ic("calendar-blank"), el("span", {}, txt)));
+        inp.addEventListener("change", () => ctx.render());
+      }
+    });
+  }
+  function decorate2(it, ctx) {
+    const c = it.card;
+    $$(".ship-type-and-cost", c).forEach((t) => addIcon(t, /room of choice|set up|delivery and/i.test(t.textContent ?? "") ? "truck" : /email/i.test(t.textContent ?? "") ? "envelope-simple" : "package"));
+    $$(".cart-delivery-details-link > a, .cart-delivery-details-link > button", c).forEach((b) => {
+      if (!b.getAttribute("aria-label"))
+        b.setAttribute("aria-label", text(b));
+      addIcon(b, "info");
+    });
+    const infoLink = $(".cart-delivery-details-link", c), shipType = $(".delivery-options .ship-type-and-cost", c);
+    if (shipType && !shipType.dataset.cmMode) {
+      shipType.dataset.cmMode = shipType.title = text(shipType).replace(/:.*$/, "").trim();
+      shipType.setAttribute("aria-label", shipType.title);
+    }
+    const home = shipType && (shipType.closest("label.selection-item:has(.cart-calendar-box)") ?? shipType);
+    if (infoLink && home && infoLink.parentElement !== home)
+      home.append(infoLink);
+    const edd = $(".estimated-delivery-date-div", c);
+    if (edd && it.deliv) {
+      const shown = Date.parse(text(edd).replace(/^Earliest Delivery\s*/i, ""));
+      edd.classList.toggle("cm-hide", !isNaN(shown) && new Date(shown).toDateString() === it.deliv.toDateString());
+    }
+    const opts = $(".delivery-options", c);
+    if (opts)
+      modeToggle(opts, ctx);
+    dateChips(c, ctx);
+  }
+  var delivery = {
+    id: "delivery",
+    name: "Delivery date chips and mode toggle",
+    render: (ctx) => ctx.items.forEach((it) => decorate2(it, ctx))
+  };
+
+  // src/plugins/footer/index.ts
+  var ICONS = [["facebook", "facebook-logo"], ["pinterest", "pinterest-logo"], ["instagram", "instagram-logo"], ["app", "device-mobile"]];
+  function icons() {
+    const tools = $("#footer-widget .footer-input-boxes");
+    if (!tools)
+      return;
+    const swap = (host, name) => {
+      if (host && !$(":scope > .cm-ic", host)) {
+        host.classList.add("cm-swapped");
+        host.prepend(ic(name));
+      }
+    };
+    const help = $(".get-help a", tools);
+    if (help && !$(":scope > .cm-ic", help))
+      help.prepend(ic("question"));
+    swap($("#footer-find-warehouse-block .input-group-btn :is(button, .btn)", tools), "magnifying-glass");
+    for (const img of $$(".social-icons img", tools)) {
+      const name = ICONS.find(([k]) => img.alt.toLowerCase().includes(k))?.[1];
+      if (name)
+        swap(img.closest("a"), name);
+      if (name && !img.closest("a")?.getAttribute("aria-label"))
+        img.closest("a")?.setAttribute("aria-label", img.alt);
+    }
+  }
+  var footer = {
+    id: "footer",
+    name: "Compact footer",
+    setup: icons
+  };
+
+  // src/plugins/header/header.module.css
+  var header_module_default = {
+    navEnd: "navEnd_IDJ-aA",
+    deliveryLocation: "deliveryLocation_IDJ-aA",
+    "MuiTypography-t7": "MuiTypography-t7_IDJ-aA",
+    "MuiTypography-root": "MuiTypography-root_IDJ-aA"
+  };
+
+  // src/plugins/header/index.ts
+  var navEnd = el("div", { class: header_module_default.navEnd });
+  function fitNav() {
+    const items = $$("#navigation-widget nav.menu > .nav-item");
+    items.forEach((n) => delete n.dataset.cmOverflow);
+    const menu = navEnd.parentElement;
+    for (let i = items.length - 1;i >= 0 && menu && menu.scrollWidth > menu.clientWidth; i--)
+      items[i].dataset.cmOverflow = "";
+  }
+  var t = 0;
+  var refit = () => {
+    clearTimeout(t);
+    t = window.setTimeout(fitNav, 50);
+  };
+  function place(on) {
+    const hdr = $("#header-widget"), nav = $("#navigation-widget"), menu = $("#navigation-widget nav.menu");
+    const loc = $("#deliveryLocation"), lists = $("#banner-list-actions"), acct = $("#header-widget .account-cart ul.t5-header-font");
+    if (!hdr || !nav || !menu)
+      return;
+    if (on) {
+      hdr.before(nav);
+      menu.append(navEnd);
+      if (loc)
+        navEnd.append(loc);
+      if (lists && acct)
+        acct.before(lists);
+      const cart = $("#cart-d");
+      if (cart && !$(":scope > .cm-ic", cart))
+        cart.prepend(ic("shopping-cart-simple"));
+      fitNav();
+    } else {
+      hdr.after(nav);
+      if (loc)
+        $("#left-bar")?.append(loc);
+      if (lists)
+        $("#order-nav")?.append(lists);
+      navEnd.remove();
+      $("#cart-d > .cm-ic")?.remove();
+    }
+  }
+  var header = {
+    id: "header",
+    name: "Compact site header",
+    setup: () => {
+      new ResizeObserver(refit).observe(navEnd);
+      addEventListener("resize", refit);
+    },
+    toggle: place
+  };
+
+  // src/plugins/pairing/index.ts
+  function link(items) {
+    const out = [];
+    for (const it of items)
+      if (!it.parent) {
+        out.push(it);
+        const kid = it.autoadd && items.find((k) => +k.orderItemId === +it.orderItemId + 1);
+        if (kid) {
+          kid.parent = it;
+          out.push(kid);
+        }
+      }
     out.forEach((it, i) => {
-      it.card.style.order = i;
-      it.card.classList.toggle('cm-child', !!it.parent);
-      it.card.classList.toggle('cm-parent', out[i + 1] ? out[i + 1].parent === it : false);
+      it.card.style.order = String(i);
+      it.card.classList.toggle("cm-child", !!it.parent);
+      it.card.classList.toggle("cm-parent", out[i + 1]?.parent === it);
+      if (it.parent)
+        $(".item-thumbnail + .col-xs-9", it.card)?.prepend(el("div", { class: "cm-child-tag cm-extra" }, ic("link-simple"), `Added with ${shortName(it.parent.name)}`));
     });
     return out;
   }
-
-  function urgency(days) {
-    if (days == null || days > 7) return null;
-    if (days < 0) return { cls: 'cm-urgent', label: 'Promo ended' };
-    if (days <= 1) return { cls: 'cm-urgent', label: days === 0 ? 'Ends today' : 'Ends tomorrow' };
-    return { cls: 'cm-warn', label: `Ends in ${days} days` };
-  }
-
-  // Inserts a Phosphor icon once into a Costco node.
-  const addIcon = (node, name, where = 'prepend') => { if (node && !$(':scope > .cm-ic', node)) node[where](ic(name)); };
-
-  function decorateCards(items) {
-    $$('.cm-extra').forEach((n) => n.remove());
-    for (const it of items) {
-      const c = it.card;
-      const row = $(':scope > .row', c), priceBox = $('.item-description-prices', c)?.parentElement;
-      if (row && priceBox && priceBox.parentElement !== row) { priceBox.classList.add('cm-price-slot'); row.append(priceBox); }
-      if (it.parent) $('.item-thumbnail + .col-xs-9', c)?.prepend(el('div', { class: 'cm-child-tag cm-extra' }, ic('link-simple'), `Added with ${shortName(it.parent.name)}`));
-      c.classList.toggle('cm-qty1', it.qty === 1);
-      c.classList.toggle('cm-email', !!it.email);
-      $$('.ltl-container, [id^="item_level_message_"]', c).forEach((n) => { if (SAME_DAY.test(n.textContent)) n.classList.add('cm-hide'); });
-
-      // Price line: Costco's two green lines become "Save $X" plus an end date beside the price.
-      const promoEl = $('.h8-style-guide-green', c);
-      if (promoEl && (it.save || it.end)) promoEl.classList.add('cm-hide');
-      const priceRow = $('.item-description-prices > .price', c);
-      const u = urgency(it.days);
-      const extras = [];
-      if (it.save) extras.push(el('span', { class: 'cm-save cm-extra' }, `Save ${fmt0(it.save)}`));
-      if (it.end && u && u.cls === 'cm-urgent') extras.push(el('span', { class: 'cm-badge cm-extra' }, `${u.label} · ${shortDate(it.end)}`));
-      else if (it.end) extras.push(el('span', { class: `cm-when cm-extra ${u ? u.cls : ''}` }, ic('timer'), u ? `${u.label} · ${shortDate(it.end)}` : `Ends ${shortDate(it.end)}`));
-      if (it.email) extras.push(el('span', { class: 'cm-when cm-extra' }, ic('envelope-simple'), 'Delivered by email'));
-      if (priceRow) priceRow.append(...extras);
-      else { const t = $('.product-title', c); if (t) t.after(el('div', { class: 'cm-extra' }, ...extras)); }
-
-      // Repeats: "Shipping & Handling Included" on every item, and Earliest Delivery when it equals the chosen date.
-      $$('.shipping-cost', c).forEach((s) => s.classList.toggle('cm-hide', /included/i.test(s.textContent)));
-      const edd = $('.estimated-delivery-date-div', c);
-      if (edd && it.deliv) {
-        const shown = Date.parse(text(edd).replace(/^Earliest Delivery\s*/i, ''));
-        edd.classList.toggle('cm-hide', !isNaN(shown) && new Date(shown).toDateString() === it.deliv.toDateString());
-      }
-
-      // Icons: actions, stepper, ship mode, calendar, help.
-      addIcon($('.remove-link button', c), 'trash');
-      const wl = $$('.wish-list button', c);
-      addIcon(wl[0], 'list-plus');
-      addIcon(wl[1], 'bookmark-simple');
-      if (wl[1] && !wl[1].getAttribute('aria-label')) wl[1].setAttribute('aria-label', 'Save for Later');
-      const stepRow = $('.quantity-selector-v2', c)?.parentElement, wlBox = $('.wish-list', c);
-      if (stepRow && wlBox && wlBox.parentElement !== stepRow) { wlBox.parentElement.classList.add('cm-hide'); stepRow.append(wlBox); }
-      addIcon($('.quantity-selector-v2 button[id^="sub-"]', c), 'minus');
-      addIcon($('.quantity-selector-v2 button[id^="add-"]', c), 'plus');
-      $$('.ship-type-and-cost', c).forEach((s) => addIcon(s, /room of choice|set up|delivery and/i.test(s.textContent) ? 'truck' : /email/i.test(s.textContent) ? 'envelope-simple' : 'package'));
-      $$('.cart-calendar-box label:has(> .co-calendar)', c).forEach((l) => { if (!$('.cm-cal', l)) l.append(ic('calendar-blank', 'cm-cal')); });
-      $$('.a11y-tooltip', c).forEach((b) => addIcon(b, 'info'));
-      $$('.cart-delivery-details-link > a, .cart-delivery-details-link > button', c).forEach((b) => {
-        if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', text(b));
-        addIcon(b, 'info');
-      });
-      const opts = $('.delivery-options', c);
-      // Any card with 2+ ship modes gets a segmented toggle, one segment per Costco radio; clicking a segment clicks that radio.
-      const radios = opts ? $$('input.shipModeId[type="radio"]', opts) : [];
-      if (radios.length > 1) {
-        const block = (r) => r.closest('.individualShipBlock, .warehouse_pickup') || r.parentElement;
-        const name = (r) => {
-          const l = opts.querySelector(`label[for="${r.id}"]`) || block(r);
-          return (text($('.ship-type-and-cost', l)) || text(l)).split(/[:(]/)[0].trim() || 'Option';
-        };
-        const icon = (r, n) => /pick-?up|warehouse/i.test(r.id + n) ? 'storefront' : /mail/i.test(n) ? 'envelope-simple' : 'truck';
-        let tog = $(':scope > .cm-mode', opts);
-        if (!tog || tog.children.length !== radios.length) {
-          tog?.remove();
-          tog = el('div', { class: 'cm-mode', role: 'group', 'aria-label': 'Delivery options' }, ...radios.map((r) => {
-            const n = name(r);
-            const b = el('button', { type: 'button', class: 'cm-mode-btn', title: n }, ic(icon(r, n)), n);
-            b.addEventListener('click', () => { if (!r.checked) r.click(); render(); });
-            return b;
-          }));
-          opts.prepend(tog);
-        }
-        opts.classList.add('cm-has-mode');
-        radios.forEach((r, i) => {
-          block(r).classList.add('cm-opt');
-          block(r).classList.toggle('cm-opt-on', r.checked);
-          tog.children[i].setAttribute('aria-pressed', String(r.checked));
-        });
-      }
-      const infoLink = $('.cart-delivery-details-link', c), shipType = $('.delivery-options .ship-type-and-cost', c);
-      if (shipType && !shipType.title) { shipType.title = text(shipType).replace(/:.*$/, '').trim(); shipType.setAttribute('aria-label', shipType.title); }
-      const infoHome = shipType && (shipType.closest('label.selection-item:has(.cart-calendar-box)') || shipType);
-      if (infoLink && infoHome && infoLink.parentElement !== infoHome) infoHome.append(infoLink);
-      $$('.cart-calendar-box input.date-input', c).forEach((inp) => {
-        const d = new Date(inp.value);
-        const label = isNaN(d) ? inp.value : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const chip = $(':scope > .cm-date-chip', inp.parentElement);
-        if (chip) chip.lastChild.textContent = label;
-        else {
-          inp.after(el('span', { class: 'cm-date-chip', 'aria-hidden': 'true' }, ic('calendar-blank'), el('span', {}, label)));
-          inp.addEventListener('change', () => render());
-        }
-      });
+  var pairing = {
+    id: "pairing",
+    name: "Protection plan under its item",
+    render: (ctx) => {
+      ctx.items = link(ctx.items);
     }
+  };
 
-    $$('.cart-part-services:not(.hidden)').forEach((svc) => {
-      addIcon($('.delivery-services-notification .add-cart-list-row', svc), 'info');
-      $$('ul.edd-delivery-services img.parts-services-tick', svc).forEach((img) => addIcon(img.parentElement, img.alt === 'included' ? 'check' : 'info'));
-      const h3 = $('.delivery-services-main h3', svc);
-      if (!h3 || $('.cm-svc-toggle', h3)) return;
-      addIcon($('label', h3), 'wrench');
-      const lists = $$('ul.edd-delivery-services', svc);
-      const included = lists[0] ? $$('li', lists[0]).length : 0;
-      const notes = lists[1] ? $$('li', lists[1]).length : 0;
-      svc.classList.add('cm-collapsed');
-      const btn = el('button', { type: 'button', class: 'cm-svc-toggle', 'aria-expanded': 'false' }, 'Details', ic('caret-down'));
-      btn.addEventListener('click', () => {
-        const open = !svc.classList.toggle('cm-collapsed');
-        btn.replaceChildren(open ? 'Hide' : 'Details', ic(open ? 'caret-up' : 'caret-down'));
-        btn.setAttribute('aria-expanded', String(open));
-      });
-      h3.append(el('span', { class: 'cm-svc-count' }, `${included} included · ${notes} notes`), btn);
-    });
+  // src/plugins/panel/panel.module.css
+  var panel_module_default = {
+    review: "review_ihOyiA",
+    head: "head_ihOyiA",
+    strip: "strip_ihOyiA",
+    "cm-ic": "cm-ic_ihOyiA",
+    warn: "warn_ihOyiA",
+    ok: "ok_ihOyiA",
+    stripRow: "stripRow_ihOyiA",
+    rows: "rows_ihOyiA",
+    row: "row_ihOyiA",
+    name: "name_ihOyiA",
+    price: "price_ihOyiA",
+    meta: "meta_ihOyiA",
+    "cm-urgent": "cm-urgent_ihOyiA",
+    "cm-warn": "cm-warn_ihOyiA",
+    rowSave: "rowSave_ihOyiA",
+    foot: "foot_ihOyiA",
+    pre: "pre_ihOyiA",
+    open: "open_ihOyiA",
+    savings: "savings_ihOyiA",
+    bar: "bar_ihOyiA",
+    "cm-on": "cm-on_ihOyiA",
+    "cm-p-panel": "cm-p-panel_ihOyiA",
+    barLabel: "barLabel_ihOyiA",
+    barTotal: "barTotal_ihOyiA",
+    barAlert: "barAlert_ihOyiA",
+    barGo: "barGo_ihOyiA"
+  };
+
+  // src/plugins/panel/bar.ts
+  function renderBar(items, total, review) {
+    let bar = $(`.${panel_module_default.bar}`);
+    if (!bar) {
+      bar = el("div", { class: panel_module_default.bar, role: "region", "aria-label": "Checkout bar" });
+      document.body.append(bar);
+    }
+    const real = $("#shopCartCheckoutSubmitButton");
+    const go = el("button", { type: "button", class: panel_module_default.barGo }, "Checkout");
+    go.disabled = !real || real.disabled;
+    go.addEventListener("click", () => real?.click());
+    const urgent = items.filter((i) => i.days != null && i.days <= 1).length;
+    const alert = urgent ? el("button", { type: "button", class: panel_module_default.barAlert }, ic("timer"), ` ${urgent} promo${urgent > 1 ? "s" : ""} ending`) : null;
+    alert?.addEventListener("click", () => review.scrollIntoView({ behavior: "smooth" }));
+    bar.replaceChildren(el("div", {}, el("div", { class: panel_module_default.barLabel }, "Est. total"), el("div", { class: panel_module_default.barTotal }, total), alert), go);
   }
 
-  // ponytail: keyword list for common big-ticket items; falls back to the first three words.
-  const shortName = (n) => ['microwave', 'refrigerator', 'freezer', 'dishwasher', 'washer', 'dryer', 'cooktop', 'range', 'oven', 'TV']
-    .find((w) => new RegExp(`\\b${w}\\b`, 'i').test(n)) || n.split(/\s+/).slice(0, 3).join(' ');
-
+  // src/plugins/panel/strip.ts
   function dateGroups(items) {
-    const groups = new Map();
-    for (const i of items.filter((x) => x.deliv)) {
-      const k = i.deliv.toDateString();
-      if (!groups.has(k)) groups.set(k, { date: i.deliv, items: [] });
-      groups.get(k).items.push(i);
-    }
+    const groups = new Map;
+    for (const i of items)
+      if (i.deliv) {
+        const k = i.deliv.toDateString();
+        if (!groups.has(k))
+          groups.set(k, { date: i.deliv, items: [] });
+        groups.get(k).items.push(i);
+      }
     return [...groups.values()].sort((a, b) => b.items.length - a.items.length);
   }
-
   function deliveryStrip(groups) {
-    if (!groups.length) return null;
-    if (groups.length === 1) return el('div', { class: 'cm-strip cm-ok' }, ic('truck'), `All deliveries arrive ${longDate(groups[0].date)}`);
+    if (!groups.length)
+      return null;
+    if (groups.length === 1)
+      return el("div", { class: `${panel_module_default.strip} ${panel_module_default.ok}` }, ic("truck"), `All deliveries arrive ${longDate(groups[0].date)}`);
     const [main, ...rest] = groups;
-    const names = (g) => g.items.map((i) => shortName(i.name)).join(', ');
-    if (groups.length === 2) return el('div', { class: 'cm-strip cm-warn' }, ic('warning'),
-      `Separate delivery days: ${names(rest[0])} arrives ${longDate(rest[0].date)}; everything else ${longDate(main.date)}.`);
-    return el('div', { class: 'cm-strip cm-warn cm-strip-list' }, ic('warning'),
-      el('div', {}, el('div', {}, `${groups.length} separate delivery days`),
-        ...[...groups].sort((x, y) => x.date - y.date).map((g) => el('div', { class: 'cm-strip-row' }, el('b', {}, longDate(g.date)), ' · ' + names(g)))));
+    const names = (g) => g.items.map((i) => shortName(i.name)).join(", ");
+    if (groups.length === 2)
+      return el("div", { class: `${panel_module_default.strip} ${panel_module_default.warn}` }, ic("warning"), `Separate delivery days: ${names(rest[0])} arrives ${longDate(rest[0].date)}; everything else ${longDate(main.date)}.`);
+    return el("div", { class: `${panel_module_default.strip} ${panel_module_default.warn}` }, ic("warning"), el("div", {}, el("div", {}, `${groups.length} separate delivery days`), ...[...groups].sort((x, y) => x.date.getTime() - y.date.getTime()).map((g) => el("div", { class: panel_module_default.stripRow }, el("b", {}, longDate(g.date)), " · " + names(g)))));
   }
 
-  function summaryText(items, totals) {
+  // src/plugins/panel/summary.ts
+  var readTotals = () => ({
+    subtotal: text($("#orderSubtotal")),
+    discount: text($("#totalDiscountOutput")),
+    shipping: text($('[automation-id="orderEstimatedShipping"]')) || text($("#order-estimated-shipping")),
+    total: text($("#order-estimated-total"))
+  });
+  function summaryText(items, t2) {
     return [
       ...items.map((i) => [
-        i.name, fmt(i.price * i.qty) + (i.qty > 1 ? ` (x${i.qty})` : ''),
-        i.save && `saves ${fmt0(i.save)}`, i.end && `promo ends ${shortDate(i.end)}`,
-        i.deliv && `delivery ${shortDate(i.deliv)}`, i.href,
-      ].filter(Boolean).join(' | ')),
-      '',
-      `Subtotal: ${totals.subtotal}`,
-      totals.discount && `Discount: ${totals.discount}`,
-      `Shipping: ${totals.shipping}`,
-      `Estimated total (pre-tax): ${totals.total}`,
-    ].filter((l) => l != null && l !== false).join('\n');
+        i.name,
+        fmt(i.price * i.qty) + (i.qty > 1 ? ` (x${i.qty})` : ""),
+        i.save && `saves ${fmt0(i.save)}`,
+        i.end && `promo ends ${shortDate(i.end)}`,
+        i.deliv && `delivery ${shortDate(i.deliv)}`,
+        i.href
+      ].filter(Boolean).join(" | ")),
+      "",
+      `Subtotal: ${t2.subtotal}`,
+      t2.discount && `Discount: ${t2.discount}`,
+      `Shipping: ${t2.shipping}`,
+      `Estimated total (pre-tax): ${t2.total}`
+    ].join(`
+`);
   }
 
-  async function copy(str) {
-    try { await navigator.clipboard.writeText(str); return true; } catch {}
-    const ta = el('textarea', { style: 'position:fixed;opacity:0' });
-    ta.value = str; document.body.append(ta); ta.select();
-    const ok = document.execCommand('copy'); ta.remove(); return ok;
-  }
-
-  function renderPanel(items) {
-    const col = $('#order-summary-column');
-    const totals = {
-      subtotal: text($('#orderSubtotal')),
-      discount: text($('#totalDiscountOutput')),
-      shipping: text($('[automation-id="orderEstimatedShipping"]')) || text($('#order-estimated-shipping')),
-      total: text($('#order-estimated-total')),
+  // src/plugins/panel/index.ts
+  function row(i, offDay) {
+    const u = urgency(i.days);
+    const meta = [];
+    if (i.end)
+      meta.push(el("span", { class: u ? u.cls : "", "aria-label": `Promo ends ${shortDate(i.end)}` }, ic("timer"), shortDate(i.end) + (u?.cls === "cm-urgent" ? i.days < 0 ? " (ended)" : i.days === 0 ? " (today)" : " (tomorrow)" : "")));
+    if (i.deliv && offDay)
+      meta.push(el("span", { class: "cm-warn", "aria-label": `Delivery ${shortDate(i.deliv)}` }, ic("truck"), shortDate(i.deliv)));
+    if (i.qty > 1)
+      meta.push(el("span", {}, `Qty ${i.qty}`));
+    const li = el("li", { class: panel_module_default.row, tabindex: "0" }, el("div", { class: panel_module_default.name }, i.href ? el("a", { href: i.href, title: i.name }, i.name) : i.name), el("div", { class: panel_module_default.price }, fmt(i.price * i.qty)), el("div", { class: panel_module_default.meta }, meta), i.save ? el("div", { class: `cm-save ${panel_module_default.rowSave}` }, el("b", {}, "-" + fmt0(i.save * i.qty))) : el("div"));
+    const jump = (e) => {
+      if (e.target.closest("a") || e instanceof KeyboardEvent && e.key !== "Enter")
+        return;
+      i.card.scrollIntoView({ behavior: "smooth", block: "center" });
+      i.card.classList.add("cm-flash");
+      setTimeout(() => i.card.classList.remove("cm-flash"), 1200);
     };
+    li.addEventListener("click", jump);
+    li.addEventListener("keydown", jump);
+    return li;
+  }
+  function footer2(items, ctx) {
+    const totals = readTotals();
+    const pre = el("pre", { class: panel_module_default.pre }, summaryText(items, totals));
+    const copyBtn = el("button", { type: "button", class: "cm-btn" }, ic("copy"), "Copy summary");
+    copyBtn.addEventListener("click", async () => {
+      const ok = await copy(summaryText(items, totals));
+      copyBtn.replaceChildren(ic(ok ? "check" : "warning"), ok ? "Copied" : "Copy failed");
+      setTimeout(() => copyBtn.replaceChildren(ic("copy"), "Copy summary"), 2000);
+    });
+    const showBtn = el("button", { type: "button", class: "cm-btn cm-icon-btn", "aria-label": "Preview summary text", title: "Preview summary text" }, ic("eye"));
+    showBtn.addEventListener("click", () => pre.classList.toggle(panel_module_default.open));
+    const offBtn = el("button", { type: "button", class: "cm-link" }, "Original view");
+    offBtn.addEventListener("click", () => ctx.setOn(false));
+    return [el("div", { class: panel_module_default.foot }, copyBtn, showBtn, offBtn), pre];
+  }
+  function render(ctx) {
+    const { items } = ctx;
     const count = items.reduce((n, i) => n + i.qty, 0);
     const itemSavings = items.reduce((n, i) => n + i.save * i.qty, 0);
     const groups = dateGroups(items);
-    const mainDate = groups[0] && groups[0].date.toDateString();
+    const mainDate = groups[0]?.date.toDateString();
+    const review = el("section", { id: "cm-review", class: panel_module_default.review, "aria-label": "Order review" }, el("div", { class: panel_module_default.head }, "Order review ", el("span", {}, `· ${count} item${count === 1 ? "" : "s"}`)), deliveryStrip(groups), el("ul", { class: panel_module_default.rows }, items.map((i) => row(i, groups.length > 1 && i.deliv?.toDateString() !== mainDate))), ...footer2(items, ctx), itemSavings ? el("div", { class: panel_module_default.savings }, el("span", {}, "Instant savings (in prices)"), el("span", {}, "-" + fmt(itemSavings))) : null);
+    const old = $("#cm-review");
+    old ? old.replaceWith(review) : $("#order-summary-column")?.before(review);
+    renderBar(items, readTotals().total, review);
+  }
+  var panel = {
+    id: "panel",
+    name: "Order review panel",
+    render
+  };
 
-    const rows = items.map((i) => {
-      const u = urgency(i.days);
-      const meta = [];
-      if (i.end) meta.push(el('span', { class: u ? u.cls : '', 'aria-label': `Promo ends ${shortDate(i.end)}` }, ic('timer'),
-        shortDate(i.end) + (u && u.cls === 'cm-urgent' ? (i.days < 0 ? ' (ended)' : i.days === 0 ? ' (today)' : ' (tomorrow)') : '')));
-      if (i.deliv && groups.length > 1 && i.deliv.toDateString() !== mainDate) meta.push(el('span', { class: 'cm-warn', 'aria-label': `Delivery ${shortDate(i.deliv)}` }, ic('truck'), shortDate(i.deliv)));
-      if (i.qty > 1) meta.push(el('span', {}, `Qty ${i.qty}`));
-      const li = el('li', { class: 'cm-row', tabindex: '0' },
-        el('div', { class: 'cm-name' }, i.href ? el('a', { href: i.href, title: i.name }, i.name) : i.name),
-        el('div', { class: 'cm-price' }, fmt(i.price * i.qty)),
-        el('div', { class: 'cm-meta' }, meta),
-        i.save ? el('div', { class: 'cm-save' }, '-' + fmt0(i.save * i.qty)) : el('div'));
-      const jump = (e) => {
-        if (e.target.closest('a') || (e.type === 'keydown' && e.key !== 'Enter')) return;
-        i.card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        i.card.classList.add('cm-flash');
-        setTimeout(() => i.card.classList.remove('cm-flash'), 1200);
-      };
-      li.addEventListener('click', jump);
-      li.addEventListener('keydown', jump);
-      return li;
-    });
+  // src/plugins/promos/cache.ts
+  var promoCache = {
+    get(itemNo) {
+      const e = kv.get("cm-promo:" + itemNo);
+      return e && Date.now() < e.expires ? e : null;
+    },
+    set(itemNo, promos) {
+      const ends = promos.map((p) => p.until ? toDate(p.until).getTime() : 0).filter(Boolean);
+      kv.set("cm-promo:" + itemNo, { at: Date.now(), expires: Math.min(Date.now() + DAY, ...ends), promos });
+    }
+  };
 
-    const pre = el('pre', { class: 'cm-pre' }, summaryText(items, totals));
-    const copyBtn = el('button', { type: 'button', class: 'cm-btn' }, ic('copy'), 'Copy summary');
-    copyBtn.addEventListener('click', async () => {
-      const ok = await copy(summaryText(items, totals));
-      copyBtn.replaceChildren(ic(ok ? 'check' : 'warning'), ok ? 'Copied' : 'Copy failed');
-      setTimeout(() => copyBtn.replaceChildren(ic('copy'), 'Copy summary'), 2000);
-    });
-    const showBtn = el('button', { type: 'button', class: 'cm-btn cm-icon-btn', 'aria-label': 'Preview summary text', title: 'Preview summary text' }, ic('eye'));
-    showBtn.addEventListener('click', () => pre.classList.toggle('cm-open'));
-    const offBtn = el('button', { type: 'button', class: 'cm-link' }, 'Original view');
-    offBtn.addEventListener('click', () => setOn(false));
-
-    const review = el('section', { id: 'cm-review', 'aria-label': 'Order review' },
-      el('div', { class: 'cm-head' }, 'Order review ', el('span', {}, `· ${count} item${count === 1 ? '' : 's'}`)),
-      deliveryStrip(groups),
-      el('ul', { class: 'cm-rows' }, rows),
-      el('div', { class: 'cm-foot' }, copyBtn, showBtn, offBtn),
-      pre,
-      itemSavings ? el('div', { class: 'cm-savings' }, el('span', {}, 'Instant savings (in prices)'), el('span', {}, '-' + fmt(itemSavings))) : null);
-    const old = $('#cm-review');
-    old ? old.replaceWith(review) : col.before(review);
-
-    let bar = $('#cm-bar');
-    if (!bar) { bar = el('div', { id: 'cm-bar', role: 'region', 'aria-label': 'Checkout bar' }); document.body.append(bar); }
-    const real = $('#shopCartCheckoutSubmitButton');
-    const go = el('button', { type: 'button', class: 'cm-bar-go' }, 'Checkout');
-    go.disabled = !real || real.disabled;
-    go.addEventListener('click', () => real && real.click());
-    const urgentCount = items.filter((i) => i.days != null && i.days <= 1).length;
-    const alertBtn = urgentCount ? el('button', { type: 'button', class: 'cm-bar-alert' }, ic('timer'), ` ${urgentCount} promo${urgentCount > 1 ? 's' : ''} ending`) : null;
-    if (alertBtn) alertBtn.addEventListener('click', () => review.scrollIntoView({ behavior: 'smooth' }));
-    bar.replaceChildren(el('div', {}, el('div', { class: 'cm-bar-label' }, 'Est. total'), el('div', { class: 'cm-bar-total' }, totals.total), alertBtn), go);
+  // src/plugins/promos/parse.ts
+  var num = (x) => +x.replace(/,/g, "");
+  var through = (s) => s.match(/through (\d{1,2}\/\d{1,2}\/\d{2,4})/)?.[1] ?? null;
+  function parsePromos(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("script,style,noscript,template").forEach((n) => n.remove());
+    const t2 = (doc.body?.textContent ?? "").replace(/\s+/g, " ");
+    const runs = [];
+    const collect = (re, type) => {
+      let run = null;
+      for (const m of t2.matchAll(re)) {
+        const i = m.index;
+        if (run && i - run.end < 12) {
+          run.tiers.push([num(m[1]), num(m[2])]);
+          run.end = i + m[0].length;
+          continue;
+        }
+        if (run)
+          runs.push(run);
+        run = { type, start: i, end: i + m[0].length, tiers: [[num(m[1]), num(m[2])]] };
+      }
+      if (run)
+        runs.push(run);
+    };
+    collect(/(?:Buy|Purchase) (\d+)(?:\+| or more)? (?:qualifying [A-Za-z&' ]+?|Items?),? save \$([\d,]+)/gi, "count");
+    collect(/Spend \$([\d,]+) Save \$([\d,]+)/g, "spend");
+    const out = [];
+    for (const r of runs.filter((x) => x.tiers.length > 1)) {
+      const before = t2.slice(Math.max(0, r.start - 220), r.start);
+      const brand = before.match(/qualifying ([A-Z][A-Za-z]+) (?:Home )?(?:Appliances|Products)/);
+      const name = r.type === "spend" ? "Appliance Spend & Save" : brand ? `${brand[1]} buy 2+` : /Costco Direct/.test(before) ? "Costco Direct buy 2+" : "Multi-buy";
+      const key = name + ":" + r.tiers.map((x) => x.join("-")).join(",");
+      if (!out.some((o) => o.key === key))
+        out.push({ key, name, type: r.type, tiers: r.tiers, until: through(t2.slice(r.end, r.end + 300)) });
+    }
+    const b = t2.match(/\$([\d,]+) BUNDLE SAVINGS WITH PURCHASE OF (.+?) AND (\w+)/i);
+    if (b) {
+      const partner = b[3].toLowerCase();
+      out.push({
+        key: "bundle:" + partner,
+        name: `Bundle with ${partner[0].toUpperCase() + partner.slice(1)} plan`,
+        type: "bundle",
+        amount: num(b[1]),
+        partner,
+        until: through(t2.slice(b.index, b.index + 600))
+      });
+    }
+    return { itemNo: t2.match(/Item (\d{5,8})\b/)?.[1] ?? null, promos: out };
   }
 
-  // Explains Costco's "Discount on Order" line from the cached promos, and checks the sum against Costco's total.
+  // src/plugins/promos/promos.module.css
+  var promos_module_default = {
+    box: "box_X0PRZQ",
+    line: "line_X0PRZQ",
+    items: "items_X0PRZQ",
+    note: "note_X0PRZQ",
+    gap: "gap_X0PRZQ",
+    fetch: "fetch_X0PRZQ"
+  };
+
+  // src/plugins/promos/index.ts
   function promoLines(items) {
-    const groups = new Map();
-    for (const it of items) for (const p of (promoCache.get(it.itemNo) || { promos: [] }).promos) {
-      const g = groups.get(p.key) || { p, items: [] };
-      g.items.push(it);
-      groups.set(p.key, g);
-    }
+    const groups = new Map;
+    for (const it of items)
+      for (const p of promoCache.get(it.itemNo)?.promos ?? []) {
+        const g = groups.get(p.key) ?? { p, items: [] };
+        g.items.push(it);
+        groups.set(p.key, g);
+      }
     const lines = [];
     for (const { p, items: its } of groups.values()) {
       let amount = 0;
-      if (p.type === 'bundle') amount = items.some((i) => !its.includes(i) && i.name.toLowerCase().includes(p.partner)) ? p.amount : 0;
+      if (p.type === "bundle")
+        amount = items.some((i) => !its.includes(i) && i.name.toLowerCase().includes(p.partner)) ? p.amount : 0;
       else {
-        const have = p.type === 'spend' ? its.reduce((s, i) => s + i.price * i.qty, 0) : its.reduce((s, i) => s + i.qty, 0);
+        const have = p.type === "spend" ? its.reduce((n, i) => n + i.price * i.qty, 0) : its.reduce((n, i) => n + i.qty, 0);
         amount = p.tiers.filter(([need]) => have >= need).reduce((best, [, save]) => Math.max(best, save), 0);
       }
-      if (amount) lines.push({ name: p.name, amount, items: its });
+      if (amount)
+        lines.push({ name: p.name, amount, items: its });
     }
     return lines.sort((a, b) => b.amount - a.amount);
   }
-
-  let fetching = false;
+  var fetching = false;
+  var last = null;
   async function fetchPromos(itemNos) {
     fetching = true;
-    renderPromos();
+    if (last)
+      render2(last);
     for (const n of itemNos) {
       try {
-        const r = await fetch(`${location.origin}/p/-/${n}`, { credentials: 'same-origin' });
-        if (r.ok) promoCache.set(n, parsePromos(await r.text()).promos);
+        const r = await fetch(`${location.origin}/p/-/${n}`, { credentials: "same-origin" });
+        if (r.ok)
+          promoCache.set(n, parsePromos(await r.text()).promos);
       } catch {}
     }
     fetching = false;
-    render();
+    last?.render();
   }
-
-  const fetchBtn = (missing) => {
-    const b = el('button', { type: 'button', class: 'cm-link' }, fetching ? 'Fetching…' : 'Fetch now');
-    b.disabled = fetching;
-    b.addEventListener('click', () => fetchPromos(missing));
-    return b;
+  function render2(ctx) {
+    last = ctx;
+    $(`.${promos_module_default.box}`)?.remove();
+    const anchor = $("#totalDiscountOutput");
+    const discount = Math.abs(money(anchor && (anchor.getAttribute("discount") || anchor.textContent)));
+    if (!anchor || !discount)
+      return;
+    const missing = ctx.items.filter((i) => i.itemNo && !promoCache.get(i.itemNo)).map((i) => i.itemNo);
+    const lines = promoLines(ctx.items);
+    const gap = Math.round((discount - lines.reduce((n, l) => n + l.amount, 0)) * 100) / 100;
+    const fetchBtn = el("button", { type: "button", class: `cm-link ${promos_module_default.fetch}` }, fetching ? "Fetching…" : "Fetch now");
+    fetchBtn.toggleAttribute("disabled", fetching);
+    fetchBtn.addEventListener("click", () => fetchPromos(missing));
+    anchor.after(el("div", { class: promos_module_default.box }, ...lines.map((l) => el("div", { class: promos_module_default.line }, el("span", {}, l.name, el("span", { class: promos_module_default.items }, " · " + l.items.map((i) => shortName(i.name)).join(", "))), el("span", {}, "-" + fmt0(l.amount)))), missing.length ? el("div", { class: promos_module_default.note }, ic("info"), el("span", { title: "Visiting each product page also fills these in. Everything stays in this browser." }, `Promo details missing for ${missing.length} item${missing.length > 1 ? "s" : ""}.`), fetchBtn) : gap === 0 ? el("div", { class: promos_module_default.note }, ic("check-circle"), "Matches Costco's discount") : el("div", { class: `${promos_module_default.note} ${promos_module_default.gap}` }, ic("warning"), `${gap > 0 ? "Unexplained" : "Over-counted"} ${fmt(Math.abs(gap))}`)));
+  }
+  var promos = {
+    id: "promos",
+    name: "Order discount breakdown",
+    product: () => {
+      const r = parsePromos(document.documentElement.outerHTML);
+      if (r.itemNo)
+        promoCache.set(r.itemNo, r.promos);
+    },
+    render: render2
   };
 
-  let lastItems = [];
-  function renderPromos(items = lastItems) {
-    lastItems = items;
-    $('#cm-promos')?.remove();
-    const anchor = $('#totalDiscountOutput');
-    const discount = Math.abs(money(anchor && (anchor.getAttribute('discount') || anchor.textContent)));
-    if (!anchor || !discount) return;
-    const missing = items.filter((i) => i.itemNo && !promoCache.get(i.itemNo)).map((i) => i.itemNo);
-    const lines = promoLines(items);
-    const sum = lines.reduce((s, l) => s + l.amount, 0);
-    const gap = Math.round((discount - sum) * 100) / 100;
-    const box = el('div', { id: 'cm-promos' },
-      ...lines.map((l) => el('div', { class: 'cm-promo' },
-        el('span', {}, l.name, el('span', { class: 'cm-promo-items' }, ' · ' + l.items.map((i) => shortName(i.name)).join(', '))),
-        el('span', {}, '-' + fmt0(l.amount)))),
-      missing.length
-        ? el('div', { class: 'cm-promo-missing' },
-          ic('info'), el('span', { title: 'Visiting each product page also fills these in. Everything stays in this browser.' }, `Promo details missing for ${missing.length} item${missing.length > 1 ? 's' : ''}.`),
-          fetchBtn(missing))
-        : gap === 0
-          ? el('div', { class: 'cm-promo-ok' }, ic('check-circle'), "Matches Costco's discount")
-          : el('div', { class: 'cm-promo-gap' }, ic('warning'), `${gap > 0 ? 'Unexplained' : 'Over-counted'} ${fmt(Math.abs(gap))}`));
-    anchor.after(box);
-  }
+  // src/plugins/redlines/index.ts
+  var redlines = {
+    id: "redlines",
+    name: "Redlines (dev)",
+    dev: true,
+    live: true
+  };
 
-  let observer, t;
-  function render() {
-    observer && observer.disconnect();
-    const items = linkAutoAdds(readItems());
-    decorateCards(items);
-    renderPanel(items);
-    renderPromos(items);
-    observer = observer || new MutationObserver(() => { clearTimeout(t); t = setTimeout(render, 150); });
-    ['#order-items', '#order-summary-column'].forEach((s) => { const n = $(s); n && observer.observe(n, { childList: true, subtree: true, characterData: true }); });
-  }
+  // src/plugins/services/services.module.css
+  var services_module_default = {
+    count: "count_HBUsug",
+    toggle: "toggle_HBUsug",
+    "cm-ic": "cm-ic_HBUsug"
+  };
 
-  function setOn(on) {
-    document.documentElement.classList.toggle('cm-on', on);
-    store.set(!on);
+  // src/plugins/services/index.ts
+  function decorate3(svc) {
+    addIcon($(".delivery-services-notification .add-cart-list-row", svc), "info");
+    $$("ul.edd-delivery-services img.parts-services-tick", svc).forEach((img) => addIcon(img.parentElement, img.alt === "included" ? "check" : "info"));
+    const h3 = $(".delivery-services-main h3", svc);
+    if (!h3 || $(`.${services_module_default.toggle}`, h3))
+      return;
+    addIcon($("label", h3), "wrench");
+    const lists = $$("ul.edd-delivery-services", svc);
+    const included = lists[0] ? $$("li", lists[0]).length : 0;
+    const notes = lists[1] ? $$("li", lists[1]).length : 0;
+    svc.classList.add("cm-collapsed");
+    const btn = el("button", { type: "button", class: services_module_default.toggle, "aria-expanded": "false" }, "Details", ic("caret-down"));
+    btn.addEventListener("click", () => {
+      const open = !svc.classList.toggle("cm-collapsed");
+      btn.replaceChildren(open ? "Hide" : "Details", ic(open ? "caret-up" : "caret-down"));
+      btn.setAttribute("aria-expanded", String(open));
+    });
+    h3.append(el("span", { class: services_module_default.count }, `${included} included · ${notes} notes`), btn);
   }
+  var services = {
+    id: "services",
+    name: "Services as a collapsible footer",
+    render: () => $$(".cart-part-services:not(.hidden)").forEach(decorate3)
+  };
 
-  loadIcons();
-  document.head.append(el('style', { id: 'cm-style' }, CSS));
-  const restore = el('button', { type: 'button', id: 'cm-restore' }, 'Cleaned-up view');
-  restore.addEventListener('click', () => setOn(true));
-  document.body.append(restore);
+  // src/plugins/settings/settings.module.css
+  var settings_module_default = {
+    wrap: "wrap_y2ChTw",
+    gear: "gear_y2ChTw",
+    "cm-ic": "cm-ic_y2ChTw",
+    menu: "menu_y2ChTw",
+    sub: "sub_y2ChTw",
+    floating: "floating_y2ChTw"
+  };
 
-  // Dev-only redline toggle: outlines every node in the cart, colored by nesting depth.
-  // Turn on with localStorage.setItem('cm-dev', '1') in the cart tab's console.
-  const DEV = (() => { try { return localStorage.getItem('cm-dev') === '1'; } catch { return false; } })();
-  if (DEV) {
-    const sel = (d) => '#cart-body' + ' > *'.repeat(d);
-    const css = ['html.cm-redline #cart-body * { outline:1px solid hsl(0 0% 50% / .5) !important; outline-offset:-1px; }',
-      ...Array.from({ length: 16 }, (_, i) => `html.cm-redline ${sel(i + 1)} { outline-color:hsl(${(i * 47) % 360} 80% 50% / .6) !important; }`)];
-    document.head.append(el('style', { id: 'cm-redline-css' }, css.join('\n')));
-    const key = 'cm-redline';
-    const on = () => { try { return localStorage.getItem(key) === '1'; } catch { return false; } };
-    const btn = el('button', { type: 'button', id: 'cm-redline-btn', title: 'Toggle redlines' }, ic('ruler'), 'Redlines');
-    const apply = (v) => { document.documentElement.classList.toggle('cm-redline', v); btn.setAttribute('aria-pressed', String(v)); };
-    btn.addEventListener('click', () => { const v = !on(); try { v ? localStorage.setItem(key, '1') : localStorage.removeItem(key); } catch {} apply(v); });
-    document.body.append(btn);
-    apply(on());
+  // src/plugins/settings/index.ts
+  var on = () => document.documentElement.classList.contains("cm-on");
+  function menu(ctx) {
+    const box = el("div", { class: settings_module_default.menu, hidden: "", role: "dialog", "aria-label": "Costco Mod settings" }, el("h3", {}, "Costco Mod"));
+    const row2 = (label2, checked, set, sub = false) => {
+      const cb = el("input", { type: "checkbox" });
+      cb.checked = checked;
+      cb.addEventListener("change", () => set(cb.checked));
+      box.append(el("label", { class: sub ? settings_module_default.sub : "" }, cb, label2));
+      return cb;
+    };
+    const view = row2("Cleaned-up view", on(), ctx.setOn);
+    ctx.plugins.filter((p) => !p.locked).forEach((p) => row2(p.name, ctx.isEnabled(p), (v) => ctx.setEnabled(p, v), true));
+    const gear = el("button", { type: "button", class: `${settings_module_default.gear} cm-gear`, title: "Costco Mod settings", "aria-label": "Costco Mod settings", "aria-expanded": "false" }, ic("gear-six"));
+    const show = (v) => {
+      view.checked = on();
+      box.hidden = !v;
+      gear.setAttribute("aria-expanded", String(v));
+    };
+    gear.addEventListener("click", () => show(!!box.hidden));
+    document.addEventListener("click", (e) => {
+      if (!wrap.contains(e.target))
+        show(false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape")
+        show(false);
+    });
+    const wrap = el("li", { class: `list-group-item ${settings_module_default.wrap}` }, gear, box);
+    return wrap;
   }
-  setOn(!store.get());
-  render();
+  var settings = {
+    id: "settings",
+    name: "Settings",
+    locked: true,
+    setup: (ctx) => {
+      const wrap = menu(ctx);
+      const acct = $("#header-widget .account-cart ul.t5-header-font");
+      if (acct)
+        acct.append(wrap);
+      else
+        document.body.append(el("ul", { class: settings_module_default.floating }, wrap));
+      if (typeof GM_registerMenuCommand === "function")
+        GM_registerMenuCommand("Toggle cleaned-up view", () => ctx.setOn(!on()));
+    }
+  };
+
+  // src/main.ts
+  var PLUGINS = [pairing, cards, delivery, services, panel, promos, header, footer, settings, redlines];
+  var KEY = "cm-plugins";
+  var saved = kv.get(KEY) ?? {};
+  var listed = PLUGINS.filter((p) => !p.dev || false);
+  var wanted = (p) => p.locked || (saved[p.id] ?? !p.dev);
+  var active = listed.filter(wanted);
+  var isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
+  var isCart = !!$("#order-items") && !!$("#order-summary-column");
+  function setOn(on2) {
+    document.documentElement.classList.toggle("cm-on", on2);
+    flag.set("cm-off", !on2);
+    for (const p of active)
+      p.toggle?.(on2);
+  }
+  var observer;
+  var timer = 0;
+  function render3() {
+    observer?.disconnect();
+    $$(".cm-extra").forEach((n) => n.remove());
+    const ctx = { ...base, items: readItems() };
+    for (const p of active)
+      p.render?.(ctx);
+    observer ??= new MutationObserver(() => {
+      clearTimeout(timer);
+      timer = window.setTimeout(render3, 150);
+    });
+    for (const s of ["#order-items", "#order-summary-column"]) {
+      const n = $(s);
+      if (n)
+        observer.observe(n, { childList: true, subtree: true, characterData: true });
+    }
+  }
+  var base = {
+    render: render3,
+    setOn,
+    plugins: listed,
+    isEnabled: (p) => p.live ? document.documentElement.classList.contains(`cm-p-${p.id}`) : active.includes(p),
+    setEnabled: (p, on2) => {
+      kv.set(KEY, { ...saved, [p.id]: on2 });
+      saved[p.id] = on2;
+      if (p.live)
+        document.documentElement.classList.toggle(`cm-p-${p.id}`, on2);
+      else
+        location.reload();
+    }
+  };
+  if (isProduct) {
+    for (const p of active)
+      p.product?.();
+  } else if (isCart) {
+    loadIcons();
+    addStyle("cm-style", "/* src/core/base.css */\nhtml.cm-on {\n  --cm-blue: #005dab;\n  --cm-blue-dark: #004b87;\n  --cm-blue-tint: #eff7fb;\n  --cm-red: #e31837;\n  --cm-green: green;\n  --cm-amber: #8a6d3b;\n  --cm-amber-tint: #fff8e1;\n  --cm-ink: #333;\n  --cm-ink-2: #4d4d4d;\n  --cm-ink-3: #5f5f5f;\n  --cm-line: #e5e5e5;\n  --cm-line-strong: #ccc;\n  --cm-group: var(--cm-blue);\n  --cm-surface-2: #f4f5f6;\n  --cm-page: #f5f5f5;\n  --cm-card: 0 0 5px #0000004d;\n}\n\nhtml.cm-on #cart-body {\n  background: var(--cm-page);\n  padding-bottom: 16px;\n}\n\nhtml.cm-on :-webkit-any(#order-items, #order-summary-column, #order-summary-body) {\n  margin-bottom: 0 !important;\n}\n\nhtml.cm-on :-moz-any(#order-items, #order-summary-column, #order-summary-body) {\n  margin-bottom: 0 !important;\n}\n\nhtml.cm-on :is(#order-items, #order-summary-column, #order-summary-body) {\n  margin-bottom: 0 !important;\n}\n\nhtml.cm-on #cart > .row > [class*=\"col-\"]:empty {\n  display: none;\n}\n\nhtml.cm-on #cart {\n  padding-top: 16px !important;\n}\n\nhtml.cm-on #cart-title {\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  white-space: nowrap;\n  width: 1px;\n  height: 1px;\n  position: absolute !important;\n  margin: 0 !important;\n}\n\nhtml.cm-on #cart-region:not(:has(.alert-notification:not(.hidden))) {\n  display: none;\n}\n\nhtml.cm-on .cm-hide, html.cm-on #cart-body .cm-hide, html:not(.cm-on) #cart-body [data-cm] {\n  display: none !important;\n}\n\n.cm-ic {\n  vertical-align: -3px;\n  font-size: 18px;\n  line-height: 1;\n}\n\n.cm-save {\n  color: var(--cm-ink-3);\n  white-space: nowrap;\n  font-weight: 400;\n}\n\n.cm-save b {\n  color: var(--cm-green);\n  font-weight: 600;\n}\n\n.cm-when {\n  display: inline-flex;\n  color: var(--cm-ink-3);\n  white-space: nowrap;\n  align-items:  center;\n  gap: 4px;\n  font-size: 12px;\n}\n\n.cm-when.cm-warn {\n  color: var(--cm-amber);\n}\n\n.cm-badge {\n  display: inline-block;\n  background: var(--cm-red);\n  color: #fff;\n  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);\n  white-space: nowrap;\n  border-radius: 3px 3px 0 0;\n  padding: 2px 16px 2px 6px;\n  font-size: 12px;\n  font-weight: 600;\n  line-height: 16px;\n}\n\n.cm-btn {\n  font: inherit;\n  border: 1px solid var(--cm-blue);\n  color: var(--cm-blue);\n  cursor: pointer;\n  display: inline-flex;\n  background: #fff;\n  border-radius: 4px;\n  align-items:  center;\n  gap: 6px;\n  height: 30px;\n  padding: 0 10px;\n  font-size: 13px;\n  font-weight: 600;\n}\n\n.cm-btn:hover {\n  background: var(--cm-blue-tint);\n}\n\n.cm-btn .cm-ic {\n  vertical-align: 0;\n  font-size: 16px;\n}\n\n.cm-icon-btn {\n  border-color: var(--cm-line-strong);\n  color: var(--cm-ink-2);\n  justify-content: center;\n  width: 30px;\n  padding: 0;\n}\n\n.cm-link {\n  font: inherit;\n  color: var(--cm-ink-3);\n  cursor: pointer;\n  text-decoration: underline;\n  background: none;\n  border: 0;\n  margin-left: auto;\n  padding: 0;\n  font-size: 12px;\n}\n\n.cm-btn:focus-visible {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: 2px;\n}\n\n.cm-link:focus-visible {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: 2px;\n}\n\n#cm-restore {\n  position: fixed;\n  z-index: 9999;\n  color: #fff;\n  cursor: pointer;\n  background: #005dab;\n  border: 0;\n  border-radius: 4px;\n  padding: 10px 14px;\n  font: 600 13px / 1 system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, sans-serif;\n  bottom: 16px;\n  right: 16px;\n  box-shadow: 0 2px 8px #0003;\n}\n\nhtml.cm-on #cm-restore {\n  display: none;\n}\n\n/* src/plugins/cards/cards.css */\n:root.cm-on.cm-p-cards #order-items-regular {\n  box-shadow: none;\n  display: flex;\n  background: none;\n  flex-direction: column;\n  gap: 12px;\n}\n\n:root.cm-on.cm-p-cards #order-items :-webkit-any(hr, .divider-line, .member-only-msg) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items :-moz-any(hr, .divider-line, .member-only-msg) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items :is(hr, .divider-line, .member-only-msg) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards .a11y-tooltip .co-help {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards .a11y-tooltip .cm-ic {\n  color: var(--cm-blue);\n  vertical-align: -2px;\n  font-size: 15px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item {\n  border: 1px solid var(--cm-line);\n  box-shadow: none;\n  color: var(--cm-ink);\n  background: #fff;\n  border-radius: 4px;\n  margin: 0;\n  transition: background .3s;\n  font-size: 13px;\n  line-height: 18px;\n  padding: 16px 20px !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item.cm-flash {\n  background: var(--cm-blue-tint);\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item.cm-qty1 :-webkit-any(.total-price, [automation-id^=\"totalPriceOutput_\"]) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item.cm-qty1 :-moz-any(.total-price, [automation-id^=\"totalPriceOutput_\"]) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item.cm-qty1 :is(.total-price, [automation-id^=\"totalPriceOutput_\"]) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-thumbnail img {\n  object-fit: contain;\n  width: 80px;\n  height: 80px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :is(.product-title[id^=\"product-name_\"], .product-title a) {\n  color: var(--cm-ink);\n  font-size: 16px;\n  font-weight: 400;\n  line-height: 22px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .product-title a {\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  overflow: hidden;\n  -webkit-box-orient: vertical;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .product-title a:hover {\n  color: var(--cm-blue);\n  text-decoration: underline;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .col-xs-9 {\n  line-height: 16px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .col-xs-9 > .product-title {\n  display: block;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .col-xs-8 > .product-title {\n  color: var(--cm-ink-3);\n  font-size: 12px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .product-warranty {\n  color: var(--cm-ink-3);\n  display: -webkit-box;\n  -webkit-line-clamp: 1;\n  overflow: hidden;\n  -webkit-box-orient: vertical;\n  font-size: 12px;\n  line-height: 16px;\n  margin-top: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .number-status {\n  display: inline;\n  color: var(--cm-ink-3);\n  font-size: 12px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .number-status .number {\n  color: var(--cm-ink-3);\n  font-size: 12px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .defining-attributes {\n  display: inline;\n  color: var(--cm-ink-3);\n  font-size: 12px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .defining-attributes div {\n  display: inline;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .defining-attributes div:before {\n  content: \"|\";\n  color: var(--cm-line-strong);\n  margin: 0 6px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-fsa:not(:has(*)) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-description-prices {\n  margin-top: 8px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-description-prices > .price {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .product-price .price {\n  color: var(--cm-ink);\n  font-size: 18px;\n  font-weight: 700;\n  line-height: 24px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .azure-entries {\n  display: flex;\n  flex-direction: column;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .azure-entries > .row:has(.quantity-selector-v2) {\n  order: 9;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .row > div:has( > .quantity-selector-v2) {\n  display: flex;\n  flex-wrap: wrap;\n  align-items:  center;\n  gap: 4px 8px;\n  margin-top: 12px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-quantity-validation-error {\n  flex-basis: 100%;\n  order: 3;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .item-quantity-validation-error:not(:has(.error:not(:empty))) {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .quantity-selector-v2 {\n  border: 1px solid var(--cm-line-strong);\n  display: inline-flex;\n  overflow: hidden;\n  border-radius: 4px;\n  width: 92px;\n  height: 28px;\n  margin: 0;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .quantity-selector-v2 button {\n  color: var(--cm-blue);\n  background: #fff;\n  border: 0;\n  width: 28px;\n  height: 26px;\n  min-height: 0;\n  padding: 0;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .quantity-selector-v2 button img {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .quantity-selector-v2 button .cm-ic {\n  vertical-align: 0;\n  font-size: 14px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .quantity-selector-v2 input {\n  text-align: center;\n  border: 0;\n  width: 34px;\n  height: 26px;\n  padding: 0;\n  font-size: 13px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .remove-link {\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .wish-list {\n  display: flex;\n  text-align: left;\n  gap: 4px;\n  margin: 0;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .wish-list > span {\n  display: none;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-webkit-any(.remove-link, .wish-list) button {\n  color: var(--cm-ink-3);\n  display: inline-flex;\n  background: none;\n  border: 0;\n  border-radius: 4px;\n  justify-content: center;\n  align-items:  center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-webkit-any(.remove-link, .wish-list) button .cm-ic {\n  vertical-align: 0;\n  font-size: 18px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-webkit-any(.remove-link, .wish-list) button:hover {\n  color: var(--cm-blue);\n  background: var(--cm-surface-2);\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-moz-any(.remove-link, .wish-list) button {\n  color: var(--cm-ink-3);\n  display: inline-flex;\n  background: none;\n  border: 0;\n  border-radius: 4px;\n  justify-content: center;\n  align-items:  center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-moz-any(.remove-link, .wish-list) button .cm-ic {\n  vertical-align: 0;\n  font-size: 18px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :-moz-any(.remove-link, .wish-list) button:hover {\n  color: var(--cm-blue);\n  background: var(--cm-surface-2);\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :is(.remove-link, .wish-list) button {\n  color: var(--cm-ink-3);\n  display: inline-flex;\n  background: none;\n  border: 0;\n  border-radius: 4px;\n  justify-content: center;\n  align-items:  center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :is(.remove-link, .wish-list) button .cm-ic {\n  vertical-align: 0;\n  font-size: 18px;\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item :is(.remove-link, .wish-list) button:hover {\n  color: var(--cm-blue);\n  background: var(--cm-surface-2);\n}\n\n:root.cm-on.cm-p-cards #order-items .order-item .remove-link button:hover {\n  color: var(--cm-red);\n}\n\n/* src/plugins/cards/grid.css */\n@media (min-width: 1024px) {\n  :root.cm-on.cm-p-cards #order-items .order-item > .row {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) 320px;\n    grid-template-rows: auto 1fr auto;\n    grid-template-areas: \"main deliv\" \"main price\" \"svc svc\";\n    column-gap: 24px;\n    margin: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row:before {\n    display: none;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row:after {\n    display: none;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > div {\n    float: none;\n    width: auto;\n    min-width: 0;\n    margin-left: 0;\n    padding: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > [class*=\"col-xl-7\"] {\n    grid-area: main;\n    position: relative;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > [class*=\"col-xl-5\"]:not([class*=\"offset\"]) {\n    grid-area: deliv;\n    position: relative;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > .col-xs-12:not([class*=\"col-xl\"]):not(.cart-part-services):not(:has(.cart-part-services)) {\n    grid-area: svc;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > div:has(.cart-part-services) {\n    grid-area: svc;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > .cart-part-services {\n    grid-area: svc;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > [class*=\"col-xl-5\"] .row {\n    margin: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > [class*=\"col-xl-5\"] [class*=\"col-\"] {\n    margin-left: 0;\n    padding: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > .cm-price-slot {\n    grid-area: price;\n    place-self:  end;\n    margin-top: 4px;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item.cm-email > .row {\n    grid-template-areas: \"main price\" \"main price\" \"svc svc\";\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item.cm-email > .row > [class*=\"col-xl-5\"]:not([class*=\"offset\"]) {\n    display: none;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries {\n    position: static;\n    min-height: 80px;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries [class*=\"col-\"] {\n    min-height: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries > .row {\n    margin-inline-start: 0;\n    margin-inline-end: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries > .row > .item-thumbnail {\n    position: absolute;\n    width: 80px;\n    padding: 0;\n    inset: 0 auto auto 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries > .row > .item-thumbnail + .col-xs-9 {\n    position: static;\n    width: calc(100% - 96px);\n    margin-left: 96px;\n    padding: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .azure-entries > .row > [class*=\"col-xl-offset-3\"] {\n    width: calc(100% - 96px);\n    margin-left: 96px;\n    padding: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .linked-item {\n    margin-bottom: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .cm-price-slot .item-description-prices {\n    margin: 0;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .cm-price-slot .item-description-prices > .price {\n    text-align: right;\n    flex-flow: wrap;\n    justify-content: flex-end;\n    align-items:  center;\n    gap: 0 10px;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item .cm-price-slot .product-price {\n    text-align: right;\n    flex-basis: 100%;\n  }\n}\n\n@media (max-width: 1024px) {\n  :root.cm-on.cm-p-cards #order-items .order-item > .row {\n    display: flex;\n    flex-direction: column;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > [class*=\"col-xl-7\"] {\n    order: -2;\n  }\n\n  :root.cm-on.cm-p-cards #order-items .order-item > .row > .cm-price-slot {\n    order: -1;\n    padding: 0 15px 0 calc(25% + 15px);\n  }\n}\n\n/* src/plugins/delivery/delivery.css */\n:root.cm-on.cm-p-delivery .delivery-options {\n  margin-bottom: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options .selection-item:not(.cart-calendar-box) {\n  box-shadow: none !important;\n  background: none !important;\n  border: 0 !important;\n  border-radius: 0 !important;\n  min-height: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options .selection-box-v3 {\n  background: none !important;\n  border: 0 !important;\n  margin-bottom: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options .ship-type-and-cost {\n  display: flex;\n  color: var(--cm-ink);\n  align-items:  center;\n  gap: 6px;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 18px;\n}\n\n:root.cm-on.cm-p-delivery .estimated-delivery-date-div {\n  margin: 2px 0 0;\n  line-height: 16px;\n  font-size: 12px !important;\n}\n\n:root.cm-on.cm-p-delivery .estimated-delivery-date-div * {\n  margin: 2px 0 0;\n  line-height: 16px;\n  font-size: 12px !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options label.selection-item {\n  width: -moz-fit-content !important;\n  width: fit-content !important;\n  margin-left: auto !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) {\n  flex-wrap: wrap;\n  justify-content: flex-end;\n  align-items:  center;\n  gap: 4px 0;\n  display: flex !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost {\n  box-sizing: border-box;\n  background: var(--cm-surface-2);\n  border: 1px solid var(--cm-line-strong);\n  border-right: 0;\n  border-radius: 14px 0 0 14px;\n  gap: 0;\n  height: 28px;\n  padding: 0 8px 0 10px;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost > :not(.cm-ic) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost > .cm-ic {\n  font-size: 18px;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .cart-delivery-details-link {\n  flex: none;\n  order: -1;\n  margin-right: 6px !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div {\n  text-align: right;\n  flex-basis: 100%;\n  order: 9;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div * {\n  display: inline !important;\n  color: var(--cm-ink-3) !important;\n  margin: 0 !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-delivery .delivery-options label.selection-item:has(.cart-calendar-box) > .estimated-delivery-date-div > :first-child:after {\n  content: \": \";\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box {\n  display: block;\n  box-shadow: none !important;\n  background: none !important;\n  border: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box [id^=\"calendarWrap\"] {\n  position: relative;\n  display: inline-flex;\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box input.date-input {\n  opacity: 0;\n  cursor: pointer;\n  z-index: 1;\n  border: 0;\n  padding: 0;\n  inset: 0;\n  position: absolute !important;\n  width: 100% !important;\n  height: 100% !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box .cart-calendar-text {\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  white-space: nowrap;\n  width: 1px;\n  height: 1px;\n  position: absolute !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box .co-calendar {\n  display: none;\n}\n\n:root.cm-on.cm-p-delivery .cart-calendar-box label {\n  position: relative;\n  display: block;\n  margin: 0;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link {\n  display: inline-flex;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :-webkit-any(a, button) {\n  display: inline-block;\n  text-align: center;\n  color: var(--cm-ink-3);\n  background: none;\n  border: 0;\n  width: 24px;\n  height: 24px;\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :-moz-any(a, button) {\n  display: inline-block;\n  text-align: center;\n  color: var(--cm-ink-3);\n  background: none;\n  border: 0;\n  width: 24px;\n  height: 24px;\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :is(a, button) {\n  display: inline-block;\n  text-align: center;\n  color: var(--cm-ink-3);\n  background: none;\n  border: 0;\n  width: 24px;\n  height: 24px;\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :-webkit-any(a, button):hover {\n  color: var(--cm-blue);\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :-moz-any(a, button):hover {\n  color: var(--cm-blue);\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link > :is(a, button):hover {\n  color: var(--cm-blue);\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link .cm-ic {\n  font-size: 18px;\n  line-height: 24px;\n}\n\n:root.cm-on.cm-p-delivery .cart-delivery-details-link span:not(.cm-ic) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options.cm-has-mode {\n  display: flex;\n  flex-direction: column;\n  align-items:  flex-end;\n  gap: 6px;\n  width: -moz-fit-content;\n  width: fit-content;\n  margin-left: auto !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options.cm-has-mode label.selection-item {\n  width: auto !important;\n  margin-left: 0 !important;\n  padding-left: 0 !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options.cm-has-mode label.selection-item:before {\n  content: none !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options.cm-has-mode .cm-opt:not(.cm-opt-on) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-delivery #order-items .delivery-options.cm-has-mode label.selection-item:has(.cart-calendar-box) > .ship-type-and-cost {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup {\n  margin-top: 10px;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup .selection-item {\n  color: var(--cm-ink-2);\n  margin: 0 !important;\n  font-size: 12px !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup .selection-item * {\n  color: var(--cm-ink-2);\n  margin: 0 !important;\n  font-size: 12px !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup .warehouse_pickup_address_lines {\n  display: -webkit-box;\n  -webkit-line-clamp: 1;\n  overflow: hidden;\n  -webkit-box-orient: vertical;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup input:not(:checked) + label .warehouse-pickup-address-v2 > div:not(.warehouse_pickup_address_lines) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-delivery .warehouse_pickup .cart-delivery-details-button {\n  background: none;\n  border: 0;\n  padding: 0;\n  color: var(--cm-blue) !important;\n}\n\n/* src/plugins/delivery/delivery.module.css */\n.mode_ZVEnOQ {\n  display: inline-flex;\n  border: 1px solid var(--cm-line-strong);\n  overflow: hidden;\n  border-radius: 14px;\n  flex-wrap: wrap;\n  max-width: 100%;\n  min-height: 28px;\n}\n\n.modeBtn_ZVEnOQ {\n  display: inline-flex;\n  white-space: nowrap;\n  color: var(--cm-ink-3);\n  font: inherit;\n  cursor: pointer;\n  background: #fff;\n  border: 0;\n  align-items:  center;\n  gap: 5px;\n  height: 28px;\n  padding: 0 10px;\n  font-size: 12px;\n  font-weight: 600;\n}\n\n.modeBtn_ZVEnOQ + .modeBtn_ZVEnOQ {\n  border-left: 1px solid var(--cm-line-strong);\n}\n\n.modeBtn_ZVEnOQ .cm-ic {\n  font-size: 16px;\n}\n\n.modeBtn_ZVEnOQ[aria-pressed=\"true\"] {\n  background: var(--cm-blue);\n  color: #fff;\n}\n\n.modeBtn_ZVEnOQ:focus-visible {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: -2px;\n}\n\n.chip_ZVEnOQ {\n  display: inline-flex;\n  border: 1px solid var(--cm-line-strong);\n  color: var(--cm-blue);\n  white-space: nowrap;\n  background: #fff;\n  border-radius: 0 14px 14px 0;\n  align-items:  center;\n  gap: 6px;\n  height: 28px;\n  padding: 0 10px 0 8px;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 18px;\n}\n\n.chip_ZVEnOQ .cm-ic {\n  margin-right: 2px;\n  font-size: 15px;\n}\n\n.chip_ZVEnOQ > span {\n  display: inline !important;\n  line-height: 26px !important;\n}\n\n[id^=\"calendarWrap\"]:hover > .chip_ZVEnOQ {\n  background: var(--cm-blue-tint);\n  border-color: var(--cm-blue);\n}\n\ninput.date-input:focus-visible + .chip_ZVEnOQ {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: 2px;\n}\n\n.cm-has-mode .chip_ZVEnOQ {\n  border-radius: 14px;\n}\n\n/* src/plugins/footer/footer.css */\n:root.cm-on.cm-p-footer #cart {\n  padding-bottom: 24px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget {\n  font-size: 12px;\n  line-height: 18px;\n  margin-top: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget > .container-fluid {\n  padding-block-start: 16px !important;\n  padding-block-end: 12px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget a {\n  color: var(--cm-ink-2);\n}\n\n:root.cm-on.cm-p-footer #footer-widget a:hover {\n  color: var(--cm-blue);\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes {\n  border-bottom: 1px solid var(--cm-line-strong);\n  margin: 0 !important;\n  padding: 0 0 12px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .row {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: space-between;\n  align-items:  center;\n  gap: 8px 28px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .row:before {\n  display: none;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .row:after {\n  display: none;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .row > div {\n  float: none;\n  align-items:  center;\n  gap: 8px;\n  min-height: 0;\n  display: flex !important;\n  width: auto !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes :-webkit-any(label, .h5-style-guide) {\n  color: var(--cm-ink-3);\n  white-space: nowrap;\n  margin: 0 !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes :-moz-any(label, .h5-style-guide) {\n  color: var(--cm-ink-3);\n  white-space: nowrap;\n  margin: 0 !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes :is(label, .h5-style-guide) {\n  color: var(--cm-ink-3);\n  white-space: nowrap;\n  margin: 0 !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .row > div:has(.get-help) > .h5-style-guide {\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  width: 1px;\n  height: 1px;\n  position: absolute !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .form-group {\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group {\n  display: flex;\n  align-items: stretch;\n  width: auto;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes input.form-control {\n  background: #fff;\n  border: 1px solid var(--cm-line-strong) !important;\n  box-shadow: none !important;\n  border-radius: 4px 0 0 4px !important;\n  width: 200px !important;\n  height: 32px !important;\n  padding: 4px 10px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes input.form-control:focus {\n  outline: none;\n  border-color: var(--cm-blue) !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group-btn {\n  display: flex;\n  width: auto;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group-btn :-webkit-any(.btn, button) {\n  background: var(--cm-blue);\n  color: #fff;\n  font-weight: 600;\n  border: 1px solid var(--cm-blue) !important;\n  border-radius: 0 4px 4px 0 !important;\n  height: 32px !important;\n  min-height: 0 !important;\n  padding: 0 12px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group-btn :-moz-any(.btn, button) {\n  background: var(--cm-blue);\n  color: #fff;\n  font-weight: 600;\n  border: 1px solid var(--cm-blue) !important;\n  border-radius: 0 4px 4px 0 !important;\n  height: 32px !important;\n  min-height: 0 !important;\n  padding: 0 12px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group-btn :is(.btn, button) {\n  background: var(--cm-blue);\n  color: #fff;\n  font-weight: 600;\n  border: 1px solid var(--cm-blue) !important;\n  border-radius: 0 4px 4px 0 !important;\n  height: 32px !important;\n  min-height: 0 !important;\n  padding: 0 12px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes #footer-find-warehouse-block .input-group-btn :-webkit-any(.btn, button) {\n  color: var(--cm-blue);\n  background: #fff;\n  border-color: var(--cm-line-strong) !important;\n  border-left: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes #footer-find-warehouse-block .input-group-btn :-moz-any(.btn, button) {\n  color: var(--cm-blue);\n  background: #fff;\n  border-color: var(--cm-line-strong) !important;\n  border-left: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes #footer-find-warehouse-block .input-group-btn :is(.btn, button) {\n  color: var(--cm-blue);\n  background: #fff;\n  border-color: var(--cm-line-strong) !important;\n  border-left: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .input-group-btn .cm-ic {\n  font-size: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .get-help {\n  display: flex;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .get-help a {\n  display: inline-flex;\n  color: var(--cm-blue);\n  align-items:  center;\n  gap: 6px;\n  height: 32px;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 20px;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .get-help a span {\n  padding: 0 !important;\n  line-height: 20px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .get-help a:before {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .get-help .cm-ic {\n  font-size: 20px;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .cm-swapped > :not(.cm-ic) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .cm-swapped .cm-ic {\n  vertical-align: 0;\n  font-size: 20px;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons {\n  display: flex;\n  gap: 4px;\n  width: auto !important;\n  min-width: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons :-webkit-any(li, a) {\n  width: auto !important;\n  min-width: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons :-moz-any(li, a) {\n  width: auto !important;\n  min-width: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons :is(li, a) {\n  width: auto !important;\n  min-width: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons a {\n  display: grid;\n  color: var(--cm-ink-2);\n  border-radius: 4px;\n  place-items:  center;\n  height: 28px;\n  width: 28px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget .footer-input-boxes .social-icons a:hover {\n  color: var(--cm-blue);\n  background: #fff;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-list {\n  border-bottom: 1px solid var(--cm-line-strong);\n  margin: 0 !important;\n  padding: 12px 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-list .footer-items {\n  display: grid;\n  grid-template-columns: repeat(5, auto);\n  justify-content: space-between;\n  gap: 0 32px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-list .footer-items:before {\n  display: none;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-list .footer-items:after {\n  display: none;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-list .footer-items > div {\n  display: contents;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list {\n  list-style: none;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list li {\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 12px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list li a {\n  font-size: 12px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list li.footer-column-title {\n  margin-bottom: 4px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list li.footer-column-title {\n  font-weight: 600;\n  color: var(--cm-ink) !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget ul.footer-list li.footer-column-title a {\n  font-weight: 600;\n  color: var(--cm-ink) !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom {\n  display: flex;\n  text-align: center;\n  flex-wrap: wrap;\n  justify-content: center;\n  align-items:  center;\n  gap: 4px 16px;\n  margin: 0 !important;\n  padding: 10px 0 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links {\n  display: contents;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links li {\n  display: flex;\n  align-items:  center;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links :-webkit-any(a, button) {\n  padding: 0 !important;\n  font-size: 12px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links :-moz-any(a, button) {\n  padding: 0 !important;\n  font-size: 12px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links :is(a, button) {\n  padding: 0 !important;\n  font-size: 12px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.links img {\n  width: 24px !important;\n  height: 12px !important;\n  margin: 0 4px 0 0 !important;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom ul.social-icons:empty {\n  display: none;\n}\n\n:root.cm-on.cm-p-footer #footer-widget #footer-bottom p.copyright {\n  color: var(--cm-ink-3);\n  flex-basis: 100%;\n  margin: 0 !important;\n  font-size: 12px !important;\n}\n\n@media (max-width: 1024px) {\n  :root.cm-on.cm-p-footer #footer-widget #footer-list .footer-items {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n    gap: 12px 24px;\n  }\n}\n\n/* src/plugins/header/header.css */\n:root.cm-on.cm-p-header #header-widget ul.top-links {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .table-container.parent {\n  padding: 8px 0 !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .right-cell {\n  padding-top: 0 !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .logo {\n  vertical-align: middle !important;\n  padding-right: 20px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .logo img {\n  width: auto !important;\n  height: 32px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #search-widget input {\n  border-radius: 4px !important;\n  height: 36px !important;\n  font-size: 14px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart {\n  vertical-align: middle !important;\n  padding-left: 20px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart nav {\n  display: flex;\n  justify-content: flex-end;\n  align-items:  center;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart ul {\n  align-items:  center;\n  display: flex !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart li {\n  align-items:  center;\n  height: 36px;\n  display: flex !important;\n  border: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart li:after {\n  content: none !important;\n  display: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart :-webkit-any(li > a, li > button):not(:-webkit-any(#cart-d, .cm-gear)) {\n  white-space: nowrap;\n  color: var(--cm-blue) !important;\n  padding: 0 12px !important;\n  font-size: 14px !important;\n  line-height: 20px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart :-moz-any(li > a, li > button):not(:-moz-any(#cart-d, .cm-gear)) {\n  white-space: nowrap;\n  color: var(--cm-blue) !important;\n  padding: 0 12px !important;\n  font-size: 14px !important;\n  line-height: 20px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart :is(li > a, li > button):not(:is(#cart-d, .cm-gear)) {\n  white-space: nowrap;\n  color: var(--cm-blue) !important;\n  padding: 0 12px !important;\n  font-size: 14px !important;\n  line-height: 20px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart li + li:before {\n  content: \"\";\n  background: var(--cm-line-strong);\n  width: 1px;\n  height: 14px;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart #banner-list-actions + ul > li:first-child:before {\n  content: \"\";\n  background: var(--cm-line-strong);\n  width: 1px;\n  height: 14px;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart li:has( > #cart-d):before {\n  content: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget .account-cart li:has(.cm-gear):before {\n  content: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d {\n  position: relative;\n  border: 1px solid var(--cm-blue);\n  border-radius: 4px;\n  align-items:  center;\n  gap: 8px;\n  height: 36px;\n  margin-left: 8px;\n  font-weight: 600;\n  display: inline-flex !important;\n  color: var(--cm-blue) !important;\n  text-decoration: none !important;\n  padding: 0 14px !important;\n  font-size: 14px !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d:-webkit-any(:hover, :focus-visible) {\n  background: var(--cm-blue-tint);\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d:-moz-any(:hover, :focus-visible) {\n  background: var(--cm-blue-tint);\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d:is(:hover, :focus-visible) {\n  background: var(--cm-blue-tint);\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d * {\n  text-decoration: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d *:before {\n  text-decoration: none !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d i.co-cart-rwd {\n  display: none;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d .cm-ic {\n  vertical-align: 0;\n  font-size: 20px;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d .offscreen {\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  width: 1px;\n  height: 1px;\n  position: absolute !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d .cart-number {\n  order: 2;\n  position: static !important;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-header #header-widget #cart-d .cart-number > div {\n  background: var(--cm-blue);\n  color: #fff;\n  text-align: center;\n  border-radius: 10px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 6px;\n  font-size: 12px;\n  line-height: 20px;\n  position: static !important;\n}\n\n:root.cm-on.cm-p-header .mini-banner {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget {\n  position: relative;\n  z-index: 20;\n}\n\n:root.cm-on.cm-p-header #navigation-widget nav.menu {\n  overflow: hidden;\n  align-items:  center;\n  height: 36px;\n  display: flex !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget .nav-item {\n  flex: none;\n  align-items:  center;\n  gap: 4px;\n  display: inline-flex !important;\n  height: 36px !important;\n  min-height: 0 !important;\n  padding: 0 12px !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget #navigation-dropdown {\n  flex: none;\n  align-items:  center;\n  gap: 4px;\n  display: inline-flex !important;\n  height: 36px !important;\n  min-height: 0 !important;\n  padding: 0 12px !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget #navigation-dropdown {\n  padding-left: 0 !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget .nav-item[data-cm-overflow] {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-header #navigation-widget :is(.nav-item > a, #navigation-dropdown) {\n  padding: 0 !important;\n  font-size: 14px !important;\n  line-height: 20px !important;\n}\n\n/* src/plugins/header/flyouts.css */\n:root.cm-on.cm-p-header .popover.top50pixels {\n  box-shadow: var(--cm-card) !important;\n  border: 0 !important;\n  border-radius: 4px !important;\n  max-width: calc(100vw - 32px) !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels .popover-content {\n  padding: 16px 20px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels .nav-popover {\n  margin: 0 !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels .services-grid-wrapper {\n  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;\n  gap: 16px 20px !important;\n  width: auto !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels .grid-column {\n  width: auto !important;\n  height: auto !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels ol > li:not(.sub-item) {\n  color: var(--cm-ink) !important;\n  margin: 0 0 4px !important;\n  padding: 0 !important;\n  font-size: 13px !important;\n  font-weight: 600 !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels ol > li:not(.sub-item) a {\n  color: var(--cm-ink) !important;\n  margin: 0 0 4px !important;\n  padding: 0 !important;\n  font-size: 13px !important;\n  font-weight: 600 !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels li.sub-item {\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 13px !important;\n  line-height: 22px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels li.sub-item a {\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 13px !important;\n  line-height: 22px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-webkit-any(h2, h3, h4, p) {\n  margin: 0 0 6px !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-moz-any(h2, h3, h4, p) {\n  margin: 0 0 6px !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :is(h2, h3, h4, p) {\n  margin: 0 0 6px !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-webkit-any(h2, h3, h4) {\n  color: var(--cm-ink) !important;\n  font-weight: 600 !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-moz-any(h2, h3, h4) {\n  color: var(--cm-ink) !important;\n  font-weight: 600 !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :is(h2, h3, h4) {\n  color: var(--cm-ink) !important;\n  font-weight: 600 !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-webkit-any(a.btn, .btn) {\n  border-radius: 4px !important;\n  height: auto !important;\n  min-height: 0 !important;\n  padding: 6px 12px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :-moz-any(a.btn, .btn) {\n  border-radius: 4px !important;\n  height: auto !important;\n  min-height: 0 !important;\n  padding: 6px 12px !important;\n  font-size: 13px !important;\n}\n\n:root.cm-on.cm-p-header .popover.top50pixels :is(a.btn, .btn) {\n  border-radius: 4px !important;\n  height: auto !important;\n  min-height: 0 !important;\n  padding: 6px 12px !important;\n  font-size: 13px !important;\n}\n\n/* src/plugins/header/header.module.css */\n.navEnd_IDJ-aA {\n  display: flex;\n  color: #fff;\n  white-space: nowrap;\n  flex: none;\n  align-items:  center;\n  height: 36px;\n  margin-left: auto;\n  padding-left: 16px;\n  font-size: 13px;\n}\n\n.navEnd_IDJ-aA #deliveryLocation {\n  fill: #fff;\n  color: #fff !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n.navEnd_IDJ-aA #deliveryLocation * {\n  fill: #fff;\n  color: #fff !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"] {\n  align-items:  center !important;\n  height: auto !important;\n}\n\n.navEnd_IDJ-aA svg {\n  width: 14px !important;\n  height: 14px !important;\n}\n\n.navEnd_IDJ-aA button {\n  min-width: 0 !important;\n  padding: 0 0 0 2px !important;\n  font-weight: 600 !important;\n}\n\n.navEnd_IDJ-aA .MuiTypography-t7 {\n  display: none !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"]:has( > .MuiTypography-t7) {\n  align-items:  center;\n  gap: 4px;\n  display: flex !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"]:has( > .MuiTypography-t7) + [class*=\"MuiBox-root\"] {\n  border-left: 1px solid #fff6;\n  padding-left: 12px;\n  margin-left: 12px !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"]:has( > .MuiTypography-t7) > div:last-child:not(.MuiTypography-root) {\n  opacity: .85;\n  margin: 0 !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"]:has( > .MuiTypography-t7) > div:last-child:not(.MuiTypography-root) * {\n  display: inline !important;\n  padding: 0 !important;\n}\n\n.navEnd_IDJ-aA [class*=\"MuiBox-root\"]:has( > .MuiTypography-t7) > div:last-child:not(.MuiTypography-root):before {\n  content: \"·\";\n  margin: 0 4px;\n}\n\n/* src/plugins/pairing/pairing.css */\n:root.cm-on.cm-p-pairing #order-items .order-item.cm-parent {\n  border-color: var(--cm-group);\n  box-shadow: 0 0 0 1px var(--cm-group);\n  border-bottom: 0;\n  border-radius: 4px 4px 0 0;\n}\n\n:root.cm-on.cm-p-pairing #order-items .order-item.cm-child {\n  background: var(--cm-surface-2);\n  border-color: var(--cm-group);\n  border-top-color: var(--cm-line);\n  box-shadow: 0 0 0 1px var(--cm-group);\n  clip-path: inset(0 -2px -2px -2px);\n  border-radius: 0 0 4px 4px;\n  margin-top: -12px;\n  padding: 10px 20px !important;\n}\n\n:root.cm-on.cm-p-pairing #order-items .order-item.cm-child .product-title a {\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.cm-child-tag {\n  display: flex;\n  color: var(--cm-ink);\n  align-items:  center;\n  gap: 6px;\n  margin-bottom: 2px;\n  font-size: 12px;\n  font-weight: 600;\n  line-height: 16px;\n}\n\n/* src/plugins/panel/panel.module.css */\n.review_ihOyiA {\n  border: 1px solid var(--cm-line);\n  color: var(--cm-ink);\n  background: #fff;\n  border-bottom: 0;\n  border-radius: 4px 4px 0 0;\n  font-size: 13px;\n  line-height: 18px;\n}\n\n.head_ihOyiA {\n  padding: 14px 20px 10px;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 18px;\n}\n\n.head_ihOyiA span {\n  color: var(--cm-ink-3);\n  font-weight: 400;\n}\n\n.strip_ihOyiA {\n  display: flex;\n  border-radius: 4px;\n  align-items:  flex-start;\n  gap: 6px;\n  margin: 0 20px 6px;\n  padding: 6px 10px;\n  font-size: 12px;\n  line-height: 16px;\n}\n\n.strip_ihOyiA .cm-ic {\n  vertical-align: 0;\n  margin-top: 1px;\n  font-size: 14px;\n}\n\n.warn_ihOyiA {\n  background: var(--cm-amber-tint);\n  color: var(--cm-amber);\n}\n\n.ok_ihOyiA {\n  background: var(--cm-blue-tint);\n  color: var(--cm-blue-dark);\n}\n\n.stripRow_ihOyiA {\n  font-weight: 400;\n}\n\n.stripRow_ihOyiA b {\n  font-weight: 600;\n}\n\n.rows_ihOyiA {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n}\n\n.row_ihOyiA {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto;\n  cursor: pointer;\n  border-top: 1px solid var(--cm-line);\n  gap: 2px 12px;\n  padding: 8px 20px;\n}\n\n.row_ihOyiA:first-child {\n  border-top: 0;\n}\n\n.row_ihOyiA:hover {\n  background: var(--cm-surface-2);\n}\n\n.row_ihOyiA:focus-visible {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: -2px;\n}\n\n.name_ihOyiA {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.name_ihOyiA a {\n  color: var(--cm-ink);\n  text-decoration: none;\n}\n\n.name_ihOyiA a:hover {\n  color: var(--cm-blue);\n  text-decoration: underline;\n}\n\n.price_ihOyiA {\n  text-align: right;\n  font-variant-numeric: tabular-nums;\n  font-weight: 700;\n}\n\n.meta_ihOyiA {\n  color: var(--cm-ink-3);\n  display: flex;\n  flex-wrap: wrap;\n  gap: 10px;\n  font-size: 12px;\n  line-height: 16px;\n}\n\n.meta_ihOyiA > span {\n  display: inline-flex;\n  align-items:  center;\n  gap: 3px;\n}\n\n.meta_ihOyiA .cm-ic {\n  vertical-align: 0;\n  font-size: 13px;\n}\n\n.meta_ihOyiA .cm-urgent {\n  color: var(--cm-red);\n  font-weight: 700;\n}\n\n.meta_ihOyiA .cm-warn {\n  color: var(--cm-amber);\n}\n\n.rowSave_ihOyiA {\n  text-align: right;\n  font-size: 12px;\n}\n\n.rowSave_ihOyiA b {\n  font-weight: 400;\n}\n\n.foot_ihOyiA {\n  display: flex;\n  white-space: nowrap;\n  border-top: 1px solid var(--cm-line);\n  align-items:  center;\n  gap: 8px;\n  padding: 10px 20px;\n}\n\n.pre_ihOyiA {\n  display: none;\n  background: var(--cm-surface-2);\n  white-space: pre-wrap;\n  overflow: auto;\n  border-radius: 4px;\n  max-height: 220px;\n  margin: 0 20px 12px;\n  padding: 10px;\n  font-size: 11px;\n  line-height: 15px;\n}\n\n.pre_ihOyiA.open_ihOyiA {\n  display: block;\n}\n\n.savings_ihOyiA {\n  display: flex;\n  border-top: 1px solid var(--cm-line);\n  color: var(--cm-ink);\n  justify-content: space-between;\n  padding: 10px 20px 0;\n  font-size: 14px;\n  line-height: 20px;\n}\n\n.savings_ihOyiA span:last-child {\n  color: var(--cm-green);\n}\n\n.bar_ihOyiA {\n  display: none;\n}\n\n@media (max-width: 1024px) {\n  :root.cm-on.cm-p-panel .bar_ihOyiA {\n    display: flex;\n    position: fixed;\n    z-index: 1000;\n    border-top: 1px solid var(--cm-line);\n    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));\n    background: #fff;\n    justify-content: space-between;\n    align-items:  center;\n    gap: 12px;\n    inset: auto 0 0;\n    box-shadow: 0 -2px 8px #00000014;\n  }\n}\n\n.barLabel_ihOyiA {\n  color: var(--cm-ink-3);\n  font-size: 12px;\n}\n\n.barTotal_ihOyiA {\n  font-variant-numeric: tabular-nums;\n  font-size: 18px;\n  font-weight: 700;\n}\n\n.barAlert_ihOyiA {\n  color: var(--cm-red);\n  background: none;\n  border: 0;\n  padding: 0;\n  font-size: 12px;\n  font-weight: 600;\n}\n\n.barGo_ihOyiA {\n  background: var(--cm-green);\n  color: #fff;\n  border: 0;\n  border-radius: 4px;\n  height: 44px;\n  padding: 0 24px;\n  font-size: 16px;\n  font-weight: 600;\n}\n\n/* src/plugins/panel/panel.css */\n:root.cm-on.cm-p-panel #order-summary-column {\n  transform: none !important;\n}\n\n:root.cm-on.cm-p-panel #order-summary-column .e-spot-cart-body {\n  display: none;\n}\n\n@media (min-width: 1024px) {\n  :root.cm-on.cm-p-panel [role=\"region\"][aria-label=\"Checkout\"] {\n    position: sticky;\n    top: 16px;\n  }\n}\n\n@media (max-width: 1024px) {\n  :root.cm-on.cm-p-panel #cart-body {\n    padding-bottom: 96px;\n  }\n}\n\n:root.cm-on.cm-p-panel #order-summary-body {\n  border-radius: 0 0 4px 4px;\n  border: 1px solid var(--cm-line) !important;\n  box-shadow: none !important;\n  background: #fff !important;\n  border-top: 0 !important;\n  margin-top: 0 !important;\n  padding: 4px 20px 16px !important;\n}\n\n:root.cm-on.cm-p-panel #order-summary-body :is(.summary-left, .summary-right, .order-estimated, .order-estimated *) {\n  margin-bottom: 6px !important;\n  font-size: 14px !important;\n  line-height: 20px !important;\n}\n\n:root.cm-on.cm-p-panel #order-summary-body .estimated-total-label {\n  font-size: 18px !important;\n  font-weight: 700 !important;\n  line-height: 24px !important;\n}\n\n:root.cm-on.cm-p-panel #order-summary-body .order-summary-text-info {\n  color: var(--cm-ink-3);\n  margin: 2px 0 12px;\n  font-size: 12px;\n}\n\n:root.cm-on.cm-p-panel #order-summary-body .divider-line {\n  border-color: var(--cm-line);\n  margin: 8px 0 10px;\n}\n\n:root.cm-on.cm-p-panel #order-estimated-total {\n  font-size: 18px !important;\n  font-weight: 700 !important;\n  line-height: 24px !important;\n}\n\n:root.cm-on.cm-p-panel #order-estimated-zip {\n  width: 75%;\n}\n\n:root.cm-on.cm-p-panel #order-estimated-shipping {\n  text-align: right;\n  width: 25%;\n}\n\n:root.cm-on.cm-p-panel #shopCartCheckoutSubmitButton {\n  border-radius: 4px;\n  width: 100%;\n  height: 44px;\n  font-weight: 600;\n}\n\n/* src/plugins/promos/promos.module.css */\n.box_X0PRZQ {\n  clear: both;\n  border-left: 2px solid var(--cm-line);\n  color: var(--cm-ink-3);\n  margin: 2px 0 8px;\n  padding-left: 12px;\n  font-size: 12px;\n  line-height: 18px;\n}\n\n.line_X0PRZQ {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n}\n\n.line_X0PRZQ > span:first-child {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--cm-ink);\n  min-width: 0;\n}\n\n.line_X0PRZQ > span:last-child {\n  color: var(--cm-green);\n  white-space: nowrap;\n}\n\n.items_X0PRZQ {\n  color: var(--cm-ink-3);\n}\n\n.note_X0PRZQ {\n  display: flex;\n  flex-wrap: wrap;\n  align-items:  center;\n  gap: 4px;\n  margin-top: 2px;\n}\n\n.gap_X0PRZQ {\n  color: var(--cm-amber);\n  font-weight: 600;\n}\n\n.fetch_X0PRZQ {\n  color: var(--cm-blue);\n  margin-left: 0;\n  font-size: 12px;\n}\n\n/* src/plugins/redlines/redlines.css */\n:root.cm-p-redlines #cart-body * {\n  outline-offset: -1px;\n  outline: 1px solid #80808080 !important;\n}\n\n:root.cm-p-redlines #cart-body > * {\n  outline-color: #e61a1a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * {\n  outline-color: #e6b91a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * {\n  outline-color: #72e61a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * {\n  outline-color: #1ae66199 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * {\n  outline-color: #1acae699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * {\n  outline-color: #1a2ae699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * {\n  outline-color: #a81ae699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * {\n  outline-color: #e61a8399 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * {\n  outline-color: #e6501a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #dbe61a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #3ce61a99 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #1ae69799 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #1a94e699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #3f1ae699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #df1ae699 !important;\n}\n\n:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * {\n  outline-color: #e61a4d99 !important;\n}\n\n/* src/plugins/services/services.css */\n:root.cm-on.cm-p-services #order-items .cart-part-services:not(.hidden) {\n  display: block;\n  background: var(--cm-surface-2);\n  border-top: 1px solid var(--cm-line);\n  float: none;\n  border-radius: 0 0 3px 3px;\n  width: auto !important;\n  margin: 8px -20px -16px !important;\n  padding: 10px 20px !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services :-webkit-any(.row, [class*=\"col-\"], .container-fluid) {\n  float: none;\n  width: auto;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services :-moz-any(.row, [class*=\"col-\"], .container-fluid) {\n  float: none;\n  width: auto;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services :is(.row, [class*=\"col-\"], .container-fluid) {\n  float: none;\n  width: auto;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .delivery-services-main {\n  font-size: 12px;\n  line-height: 16px;\n  background: none !important;\n  border: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services h3 {\n  display: flex;\n  align-items:  center;\n  gap: 8px;\n  font-size: 13px;\n  line-height: 18px;\n  margin: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services h3 label.parts-bold {\n  display: inline-flex;\n  align-items:  center;\n  gap: 6px;\n  margin: 0;\n  font-weight: 600;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services [id^=\"edd-delivery-services-container\"] {\n  margin-top: 0 !important;\n  padding-top: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services [id^=\"edd-delivery-services-container\"] > :first-child {\n  margin-top: 0 !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .delivery-services-notification {\n  color: var(--cm-amber);\n  background: none;\n  border: 0;\n  margin: 4px 0 0;\n  padding: 0;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .delivery-services-notification * {\n  padding: 0 !important;\n  font-size: 12px !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .delivery-services-notification img {\n  display: none;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .delivery-services-notification .cm-ic {\n  vertical-align: -2px;\n  margin-right: 6px;\n  font-size: 14px;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services.cm-collapsed :-webkit-any(ul.edd-delivery-services, .parts-types-bold) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services.cm-collapsed :-moz-any(ul.edd-delivery-services, .parts-types-bold) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services.cm-collapsed :is(ul.edd-delivery-services, .parts-types-bold) {\n  display: none !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services:not(.cm-collapsed) ul.edd-delivery-services {\n  list-style: none;\n  max-width: 72ch;\n  margin: 2px 0 6px;\n  padding: 0;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .parts-types-bold {\n  display: block;\n  color: var(--cm-ink-3);\n  font-weight: 600;\n  margin: 8px 0 0 !important;\n  font-size: 12px !important;\n  line-height: 16px !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services ul.edd-delivery-services li {\n  display: flex;\n  color: var(--cm-ink);\n  gap: 6px;\n  margin: 2px 0;\n  font-size: 13px;\n  line-height: 18px;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services ul.edd-delivery-services li .add-cart-list-detail {\n  margin: 0 !important;\n  padding: 0 !important;\n  font-size: 13px !important;\n  line-height: 18px !important;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services ul.edd-delivery-services li > .add-cart-list-cell:first-child {\n  display: flex;\n  flex: none;\n  padding-top: 2px;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services img.parts-services-tick {\n  display: none;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .add-cart-list-cell > .ph-check {\n  color: var(--cm-green);\n  font-size: 14px;\n}\n\n:root.cm-on.cm-p-services #order-items .cart-part-services .add-cart-list-cell > .ph-info {\n  color: var(--cm-ink-3);\n  font-size: 14px;\n}\n\n@media (max-width: 1024px) {\n  :root.cm-on.cm-p-services #order-items .cart-part-services:not(.hidden) {\n    padding-left: 20px !important;\n  }\n}\n\n/* src/plugins/services/services.module.css */\n.count_HBUsug {\n  color: var(--cm-ink-3);\n  font-weight: 400;\n}\n\n.toggle_HBUsug {\n  font: inherit;\n  color: var(--cm-blue);\n  cursor: pointer;\n  display: inline-flex;\n  background: none;\n  border: 0;\n  align-items:  center;\n  gap: 2px;\n  padding: 0;\n  font-size: 13px;\n}\n\n.toggle_HBUsug .cm-ic {\n  vertical-align: 0;\n  font-size: 14px;\n}\n\n.toggle_HBUsug:focus-visible {\n  outline: 2px solid var(--cm-blue);\n  outline-offset: 2px;\n}\n\n/* src/plugins/settings/settings.module.css */\n.wrap_y2ChTw {\n  position: relative;\n  margin-left: 8px !important;\n}\n\n.gear_y2ChTw {\n  color: #005dab;\n  cursor: pointer;\n  display: grid;\n  background: none;\n  border: 0;\n  border-radius: 4px;\n  place-items:  center;\n  width: 32px;\n  height: 32px;\n  padding: 0 !important;\n}\n\n.gear_y2ChTw:-webkit-any(:hover, [aria-expanded=\"true\"]) {\n  background: #eff7fb;\n}\n\n.gear_y2ChTw:-moz-any(:hover, [aria-expanded=\"true\"]) {\n  background: #eff7fb;\n}\n\n.gear_y2ChTw:is(:hover, [aria-expanded=\"true\"]) {\n  background: #eff7fb;\n}\n\n.gear_y2ChTw:focus-visible {\n  outline: 2px solid #005dab;\n  outline-offset: 2px;\n}\n\n.gear_y2ChTw .cm-ic {\n  vertical-align: 0;\n  font-size: 20px;\n}\n\n.menu_y2ChTw {\n  position: absolute;\n  z-index: 1000;\n  color: #333;\n  text-align: left;\n  background: #fff;\n  border-radius: 4px;\n  width: max-content;\n  min-width: 240px;\n  padding: 12px 14px;\n  font: 400 13px / 18px inherit;\n  top: calc(100% + 6px);\n  right: 0;\n  box-shadow: 0 0 5px #0000004d;\n}\n\n.menu_y2ChTw[hidden] {\n  display: none;\n}\n\n.menu_y2ChTw h3 {\n  color: #707070;\n  text-transform: uppercase;\n  letter-spacing: .04em;\n  margin: 0 0 8px;\n  font-size: 12px;\n  font-weight: 600;\n  line-height: 16px;\n}\n\n.menu_y2ChTw label {\n  display: flex;\n  cursor: pointer;\n  align-items:  center;\n  gap: 8px;\n  margin: 0 0 6px;\n  font-weight: 400;\n}\n\n.menu_y2ChTw input {\n  accent-color: #005dab;\n  margin: 0;\n}\n\n.sub_y2ChTw {\n  color: #5f5f5f;\n  padding-left: 20px;\n}\n\n.floating_y2ChTw {\n  position: fixed;\n  z-index: 9999;\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  top: 12px;\n  right: 12px;\n}\n");
+    document.documentElement.classList.add(...active.map((p) => `cm-p-${p.id}`));
+    const restore = el("button", { type: "button", id: "cm-restore" }, "Cleaned-up view");
+    restore.addEventListener("click", () => setOn(true));
+    document.body.append(restore);
+    const ctx = { ...base, items: [] };
+    for (const p of active)
+      p.setup?.(ctx);
+    setOn(!flag.get("cm-off"));
+    render3();
+  }
 })();

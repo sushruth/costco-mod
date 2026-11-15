@@ -4,9 +4,10 @@ import s from './panel.module.css';
 
 // Phones and tablets: a fixed bar with the total, promos ending soon, and Costco's Checkout button.
 export function renderBar(items: Item[], total: string, review: HTMLElement) {
+  const real = $<HTMLButtonElement>('#shopCartCheckoutSubmitButton');
+  if (!real) return; // checkout has its own Place Order
   let bar = $(`.${s.bar}`);
   if (!bar) { bar = el('div', { class: s.bar, role: 'region', 'aria-label': 'Checkout bar' }); document.body.append(bar); }
-  const real = $<HTMLButtonElement>('#shopCartCheckoutSubmitButton');
   const go = el('button', { type: 'button', class: s.barGo }, 'Checkout');
   go.disabled = !real || real.disabled;
   go.addEventListener('click', () => real?.click());

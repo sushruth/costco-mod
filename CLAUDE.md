@@ -11,7 +11,7 @@ A Violentmonkey userscript (`costco-cart.user.js`) that restyles costco.com in p
 ## Architecture
 
 - `src/` is the source; `costco-cart.user.js` is the build output, committed so the raw GitHub URL installs and updates. Never edit the output by hand.
-- `src/main.ts` lists the plugins in run order. Each plugin in `src/plugins/<id>/` exports a `Plugin` (`src/core/plugin.ts`) with optional `product`, `setup`, `render` and `toggle` hooks, and gets a switch in the gear menu. Off the cart, only the header, search results, footer and settings plugins run (`here` in `main.ts`).
+- `src/main.ts` lists the plugins in run order. Each plugin in `src/plugins/<id>/` exports a `Plugin` (`src/core/plugin.ts`) with optional `product`, `setup`, `render` and `toggle` hooks, and gets a switch in the gear menu. Off the cart, only the header, search results, checkout, footer and settings plugins run (`here` in `main.ts`).
 - Every file stays under 180 lines.
 - CSS: native nesting, modern media ranges. Rules for Costco's markup live in `<plugin>.css`, nested under `:root.cm-on.cm-p-<id>`, so a switched-off plugin's CSS stops matching. Nodes a plugin creates are styled with a CSS module (`<plugin>.module.css`, hashed class names). Every node the script creates carries `data-cm`.
 - Watch specificity: Costco uses IDs and `!important`. An `:is()` with an ID inside takes the ID's weight.

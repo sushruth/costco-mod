@@ -32,7 +32,9 @@ export const settings: Plugin = {
   setup: (ctx) => {
     const wrap = menu(ctx);
     const acct = $('#header-widget .account-cart ul.t5-header-font');
+    const checkoutLinks = $('#checkout-links');
     if (acct) acct.append(wrap);
+    else if (checkoutLinks) checkoutLinks.append(el('ul', { class: s.inline }, wrap));
     else document.body.append(el('ul', { class: s.floating }, wrap));
     if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Toggle cleaned-up view', () => ctx.setOn(!on()));
   },

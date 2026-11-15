@@ -1,0 +1,52 @@
+/* Checkout, set like the cart: a grey page, a white header with a blue rule, the steps on the left and a sticky
+   360px summary card on the right. The steps themselves are in steps.css. */
+:root.cm-on.cm-p-checkout:has(#single-page-checkout) {
+  & body, & main#tiles-body-attribute { background:var(--cm-page) !important; }
+
+  /* header: 32px logo, 14px links with a short divider, the gear at the end */
+  & #header-checkout-widget {
+    background:#fff !important; border-bottom:4px solid var(--cm-blue) !important; padding:0 !important;
+    & .fixed-container { max-width:1440px !important; padding:8px 24px !important; }
+    & .row, & .col-xs-12 { margin:0 !important; padding:0 !important; width:100% !important; }
+    & .table-container { padding:0 !important; }
+    & .table-cell { vertical-align:middle !important; }
+    & img { height:32px !important; width:auto !important; }
+    & #checkout-links { display:flex; align-items:center; justify-content:flex-end; margin:0 !important; }
+    & #checkout-links a { font-size:14px !important; line-height:20px !important; color:var(--cm-blue) !important; padding:0 12px; }
+    & #spacer { display:block !important; flex:none; width:1px !important; height:14px !important; padding:0 !important; margin:0 !important; border:0 !important; background:var(--cm-line-strong) !important; }
+  }
+
+  /* title row, then steps and summary */
+  & #single-page-checkout.fixed-container { max-width:1440px !important; padding:16px 24px 24px !important; }
+  & #single-page-checkout > .row { display:grid; grid-template-columns:minmax(0, 1fr) 360px; column-gap:20px; align-items:start; margin:0 !important; padding:0 !important; }
+  & #single-page-checkout > .row > * { grid-column:1 / -1; width:auto !important; margin:0 !important; padding:0 !important; float:none !important; }
+  & #single-page-checkout > .row > #checkout-header { grid-row:1; margin-bottom:12px !important;
+    & h1 { font-size:20px !important; line-height:28px !important; margin:0 !important; color:var(--cm-ink-2); } }
+  & #checkout-header + div { display:none !important; }
+  & #checkout-options { grid-column:1 !important; grid-row:2; display:flex; flex-direction:column; gap:12px; counter-reset:cm-step; }
+  & #checkout-options > :not(#shipping, #billing, #shipping-options) { display:none !important; }
+  & #order-summary-column { grid-column:2 !important; grid-row:2; position:sticky; top:16px; }
+
+  /* summary: one card; totals 14px, the total 18px bold, a full-width 44px Place Order. With the order review card above it, the two read as one card. */
+  & #order-summary-column:has(#cm-review) #order-summary-body { border-top:0 !important; border-radius:0 0 4px 4px !important; padding-top:4px !important; }
+  & #order-summary { margin:0 !important; }
+  & #order-summary-body {
+    background:#fff !important; border:1px solid var(--cm-line) !important; border-radius:4px; box-shadow:none !important; padding:16px 20px !important; margin:0 !important; width:auto !important;
+    & .row { margin-left:0 !important; margin-right:0 !important; }
+    & [class*="col-"] { padding-left:0 !important; padding-right:0 !important; }
+    & .divider-line { margin:10px 0 !important; border-color:var(--cm-line) !important; }
+    & #edit-membership-block { & img { width:48px !important; height:auto !important; } & * { font-size:13px !important; line-height:18px !important; } }
+    & .summary-left, & .summary-right, & #subtotal-name, & #subtotal-value { font-size:14px !important; line-height:20px !important; margin:0 0 6px !important; }
+    & .h6-style-guide { font-size:18px !important; line-height:24px !important; font-weight:700 !important; margin:0 !important; }
+    & #promo-code-input-block { margin:6px 0 0 !important; }
+    & #promo-code-form { display:flex; gap:8px; }
+    & #promo-code-form > [class*="col-"] { width:auto !important; flex:1; }
+    & #promo-code-form input, & #promo-code-form button { height:32px !important; min-height:0 !important; font-size:13px !important; border-radius:4px !important; padding-block:0 !important; }
+    & #learnmore-checkout-tooltip { margin:4px 0 0 !important; & * { font-size:12px !important; } }
+    & .rewards-block { font-size:12px; line-height:16px; color:var(--cm-ink-3); margin-top:6px; }
+    /* the Costco Visa pitch */
+    & #cashRewardsText { display:none !important; }
+    & .place-order-terms { font-size:12px; line-height:16px; color:var(--cm-ink-3); margin:0 0 12px !important; & a { font-size:12px; } }
+    & #place-order-button-regular button, & #place-order-button-regular input { width:100% !important; height:44px !important; border-radius:4px !important; font-weight:600 !important; font-size:15px !important; }
+  }
+}

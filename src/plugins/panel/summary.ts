@@ -5,10 +5,11 @@ import type { Item } from '../../core/items';
 export type Totals = { subtotal: string; discount: string; shipping: string; total: string };
 
 export const readTotals = (): Totals => ({
-  subtotal: text($('#orderSubtotal')),
+  // cart ids first, then checkout's
+  subtotal: text($('#orderSubtotal')) || text($('#subtotal-value')),
   discount: text($('#totalDiscountOutput')),
-  shipping: text($('[automation-id="orderEstimatedShipping"]')) || text($('#order-estimated-shipping')),
-  total: text($('#order-estimated-total')),
+  shipping: text($('[automation-id="orderEstimatedShipping"]')) || text($('#order-estimated-shipping')) || text($('#order-summary-total-section .summary-right')),
+  total: text($('#order-estimated-total')) || text($('#orderTotalOutput')),
 });
 
 // Plain-text cart summary for pasting into a note or a message.

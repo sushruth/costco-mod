@@ -61,7 +61,11 @@ function render(ctx: Ctx) {
     ...footer(items, ctx),
     itemSavings ? el('div', { class: s.savings }, el('span', {}, 'Instant savings (in prices)'), el('span', {}, '-' + fmt(itemSavings))) : null);
   const old = $('#cm-review');
-  old ? old.replaceWith(review) : $('#order-summary-column')?.before(review);
+  // Checkout's summary column is a sticky grid cell, so the card goes inside it, above the totals.
+  const col = $('#order-summary-column');
+  if (old) old.replaceWith(review);
+  else if ($('#single-page-checkout')) col?.prepend(review);
+  else col?.before(review);
   renderBar(items, readTotals().total, review);
 }
 

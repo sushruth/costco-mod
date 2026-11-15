@@ -1,0 +1,128 @@
+/* Checkout steps: each is a white card with a numbered 16px title. Addresses run on two lines, Costco Wallet sits
+   beside the card, and items are rows of image, details, stepper and total. */
+:root.cm-on.cm-p-checkout:has(#single-page-checkout) {
+  & #shipping, & #billing, & #shipping-options {
+    background:#fff; border:1px solid var(--cm-line); border-radius:4px; padding:16px 20px !important; margin:0 !important; width:auto !important;
+    font-size:13px; line-height:18px; color:var(--cm-ink);
+    & .row { margin-left:0 !important; margin-right:0 !important; }
+    & [class*="col-"] { padding-left:0 !important; padding-right:0 !important; }
+    & hr, & .divider-line { display:none !important; }
+    & h2.section-title { position:relative; font-size:16px !important; line-height:22px !important; font-weight:600 !important; margin:0 !important; padding:0 !important; color:var(--cm-ink); counter-increment:cm-step; }
+    /* the step number sits on the card's left edge, half outside, like a tab label: 20px padding + 1px border + half of 24px */
+    & h2.section-title::before { content:counter(cm-step); position:absolute; left:-33px; top:50%; transform:translateY(-50%); display:grid; place-items:center; width:24px; height:24px; border-radius:50%;
+      box-sizing:border-box; border:2px solid var(--cm-page); background:var(--cm-blue); color:#fff; font-size:12px; line-height:1; font-weight:600; }
+    & .section-title-number { display:none !important; }
+    & .checkout-container-title { margin:0 0 8px !important; }
+  }
+
+  /* addresses: name · street · city on the first line, email · phone on the second */
+  & .address-display-block { margin:0 !important; padding:0 !important;
+    & > div { display:block; line-height:18px; }
+    & br { display:none; }
+    & > div > span, & > div > span > div { display:inline !important; }
+    & > div > span > div::before { content:" · "; }
+    & > div > span > div:nth-last-child(2)::before { content:""; display:block; }
+  }
+
+  /* 1: address, then the text-message consent in small print */
+  & #shipping {
+    & .address-display { padding:0 !important; margin:8px 0 0 !important; }
+    & .address-display * { font-size:13px !important; line-height:20px !important; margin:0 !important; }
+    & #sms-notification-wrapper { position:static !important; height:auto !important; min-height:0 !important; padding:12px 0 0 !important; margin:0 !important; clear:both; color:var(--cm-ink-3); }
+    & #sms-notification-wrapper > #sms-notification-wrapper { margin:0 !important; padding:0 !important; }
+    & #sms-notification-wrapper .col-xs-12, & #edit-contact-information-phone { height:auto !important; min-height:0 !important; }
+    & .form-group { margin-bottom:0 !important; }
+    & .form-group.col-lg-6:not(:has(input:not([type=hidden]))) { display:none !important; }
+    & #shipping-address-sms-notification { margin:0 !important; }
+    & .contact-information { margin:0 0 8px !important; }
+    & .contact-information label { font-size:13px !important; line-height:18px !important; font-weight:600; margin:0 !important; color:var(--cm-ink); }
+    & #sms-notification-wrapper label, & #sms-notification-wrapper p, & #sms-notification-wrapper span { font-size:12px !important; line-height:16px !important; }
+  }
+
+  /* 2: title, then Costco Wallet (left) and the card (right), then the pre-authorization note */
+  & #billing {
+    & > .row { display:grid !important; grid-template-columns:1fr 1fr; column-gap:16px; align-items:start; }
+    & > .row > * { grid-column:1 / -1; width:auto !important; height:auto !important; min-height:0 !important; float:none !important; }
+    & > .row > :has(.section-title) { grid-row:1; margin-bottom:10px !important; }
+    & #payment-method-shop-card { grid-column:1; grid-row:2 / span 2; display:grid; grid-template-columns:1fr auto; align-items:center; padding:0 !important; }
+    & > .row > .col-xs-7:not(:has(.section-title)) { grid-column:2; grid-row:2; margin:0 0 6px !important; }
+    & > .row > .col-xs-12:has(.cc-border) { grid-column:2; grid-row:3; }
+    & > .row > .preauthcharges-text { grid-row:4; margin:8px 0 0 !important; font-size:12px; color:var(--cm-ink-3); }
+    & #checkout-espot-v2 { display:none !important; } /* the Costco Visa ad */
+    & #payment-method-shop-card > * { grid-column:1 / -1; width:auto !important; float:none !important; }
+    & #shop-card-text { grid-column:1; grid-row:1; }
+    & #addShopCardContainer { grid-column:2; grid-row:1; text-align:right; & * { font-size:13px !important; } }
+    & #shop-card-text, & h2:not(.section-title) { font-size:14px !important; line-height:20px !important; font-weight:600 !important; margin:0 0 6px !important; }
+    & .left:not(:has(:not(.kluge))) { display:none !important; } /* an empty spacer */
+    & #shop-card-block, & .cc-border { border:1px solid var(--cm-line) !important; border-radius:4px; padding:10px 12px !important; margin:0 !important; }
+    & #shop-card-block * { font-size:13px !important; line-height:18px !important; }
+    & #shop-card-block img { height:28px !important; width:auto !important; }
+    & #credit-card-block-review { margin-bottom:6px !important; }
+    /* card box: radio, logo and card details on one line, Click to Pay under it, the billing address under the details */
+    & .card-container { display:flex; align-items:center; gap:10px; }
+    & .card-image { width:auto !important; flex:none; margin:0 !important; padding:0 !important; }
+    & .card-information { font-size:13px !important; line-height:18px !important; margin:0 !important; padding:0 !important; }
+    & .card-image img { height:16px !important; width:auto !important; }
+    & #radio-clickpay-ada-handler { margin:6px 0 0 !important; }
+    & .control--radio { display:flex !important; align-items:center; min-height:24px; }
+    & .control--radio .control__indicator { top:50% !important; margin:-8px 0 0 !important; }
+    & #clickpay-image-display { height:24px !important; width:auto !important; padding:0 !important; margin:0 !important; }
+    & #payment-address-form h3 { margin:10px 0 2px !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
+    & #payment-address-form .address-display { padding:0 !important; margin:0 !important; }
+    & #address-block-billing { padding-left:25px; & .bill-address-title { padding:0 !important; } }
+    /* "or", then Affirm */
+    & .hr-div { display:flex; align-items:center; gap:8px; margin:10px 0 !important; position:static !important;
+      & hr { display:block !important; flex:1; margin:0 !important; border:0 !important; border-top:1px solid var(--cm-line) !important; }
+      & .hr-span { order:1; position:static !important; font-size:12px; color:var(--cm-ink-3); background:none !important; padding:0 !important; }
+      &::after { content:""; order:2; flex:1; border-top:1px solid var(--cm-line); } }
+    & #affirm-pay { height:36px !important; min-height:0 !important; font-size:13px !important; border-radius:4px !important; margin:0 !important; float:none !important; width:100% !important; }
+    & .affirm-info-text { margin-top:6px !important; & * { font-size:12px !important; color:var(--cm-ink-3); } & br { display:none; } & .learn-more-affirm { margin-left:8px; color:var(--cm-blue) !important; } }
+  }
+
+  /* 3: the 2-Day badge and note, the free-delivery nudge, then one row per item */
+  & #shipping-options {
+    & #order-items > .row:has(a) { margin:0 0 2px !important; & img { height:18px !important; width:auto !important; } & > * { height:auto !important; } }
+    & .grocery-header-text { margin-bottom:8px; & p { margin:0 !important; } & * { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3); } }
+    & .grocery-header-text button { color:var(--cm-blue) !important; padding:0 !important; }
+    & .grey-box { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; background:var(--cm-surface-2) !important; border:0 !important; border-radius:4px; padding:10px 12px !important; margin:0 0 4px !important; }
+    & .grey-box * { font-size:13px !important; }
+    & .grocery-add-more-items { flex:none; margin:0 !important; width:auto !important; }
+    & .grocery-add-more-items a, & .grocery-add-more-items button { display:inline-flex !important; align-items:center; width:auto !important; min-width:0 !important; height:30px !important; padding:0 12px !important; font-size:13px !important; white-space:nowrap; border-radius:4px; }
+    & #order-review-options, & .order-items, & #order-items, & #ShopCartForm, & #order-items-grocery { border:0 !important; box-shadow:none !important; padding-bottom:0 !important; margin-bottom:0 !important; }
+
+    & .order-item { border-top:1px solid var(--cm-line); padding:8px 0 !important; margin:0 !important; }
+    & .order-item:first-child { border-top:0; }
+    /* one row per item: image | title over item number · price | stepper | Remove | line total */
+    & .item-shipping-container { display:grid; grid-template-columns:48px minmax(0, 1fr) 88px auto 72px; column-gap:12px; align-items:center; }
+    & .item-shipping-container > .row { display:contents; }
+    & .item-shipping-container > .row:last-child { display:none !important; }
+    & .item-shipping-container > .row > [class*="col-"] { width:auto !important; height:auto !important; float:none !important; margin:0 !important; }
+    & .top-row > :first-child { grid-column:1; grid-row:1; }
+    & .top-row img { width:48px !important; height:48px !important; object-fit:contain; }
+    & .top-row > :last-child { grid-column:2; grid-row:1; min-width:0; }
+    & .top-row + .row > :first-child { grid-column:3; grid-row:1; }
+    & .order-item .item-shipping-container > .remove-link { grid-column:4; grid-row:1; margin:0 !important;
+      & button, & span { font-size:12px !important; line-height:16px !important; padding:0 !important; height:auto !important; } }
+    & .top-row + .row > :last-child { grid-column:5; grid-row:1; justify-self:end; }
+    & .top-row .col-md-12 { display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; }
+    & .product-title { flex:0 0 100%; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    & .product-title, & .product-title * { font-size:14px !important; line-height:20px !important; }
+    & .number-status { height:auto !important; margin:0 !important; & * { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3); } }
+    & .item-description-prices, & .item-error-block, & .defining-attributes { margin:0 !important; }
+    & .defining-attributes:not(:has(*)) { display:none !important; }
+    & .item-description-prices .price { font-size:13px !important; line-height:16px !important; font-weight:600; }
+    & .item-description-prices::before { content:"·"; margin-right:8px; color:var(--cm-ink-3); }
+    & .item-description-prices, & .item-description-prices > .price, & .product-price { display:inline !important; }
+    & .item-description-prices .h8-style-guide-green:empty { display:none; }
+    & .quantity-selector-v2 { display:inline-flex; width:auto !important; height:28px; margin:0 !important;
+      & button, & input { height:28px !important; min-height:0 !important; }
+      & button { width:28px !important; } & button img { width:11px !important; height:auto !important; }
+      & input { width:32px !important; font-size:13px !important; } }
+    /* the line total alone; "Total" is implied by its column */
+    /* the each price only when it differs from the line total */
+    & .order-item:has(.quantity-selector-v2 input[value="1"]) .item-description-prices { display:none !important; }
+    & .item-total { display:block; float:none !important; text-align:right; padding:0 !important;
+      & > div:has(label) { display:none; }
+      & .h7-style-guide-v2 { font-size:15px !important; line-height:20px !important; font-weight:700; } }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "costco-mod",
-  "version": "0.12.0",
-  "description": "Restyles costco.com in place: a compact header on every page, compact search results with unit prices and simpler filters, and a cart with compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.",
+  "version": "0.13.0",
+  "description": "Restyles costco.com in place: a compact header on every page, compact search results with unit prices and simpler filters, a cart with compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts, and a compact checkout. Everything stays in your browser.",
   "private": true,
   "type": "module",
   "license": "MIT",

@@ -4,6 +4,7 @@ import type { Ctx, Plugin } from './core/plugin';
 import { flag, kv } from './core/store';
 import './core/base.css';
 import { cards } from './plugins/cards';
+import { checkout } from './plugins/checkout';
 import { delivery } from './plugins/delivery';
 import { footer } from './plugins/footer';
 import { header } from './plugins/header';
@@ -16,7 +17,7 @@ import { services } from './plugins/services';
 import { settings } from './plugins/settings';
 
 // Order matters: pairing reorders items before the plugins that draw them.
-const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, search, footer, settings, redlines];
+const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, search, checkout, footer, settings, redlines];
 
 declare const __CM_CSS__: string; // the bundled CSS, inlined by dev/build.ts
 
@@ -29,9 +30,13 @@ const listed = PLUGINS.filter((p) => !p.dev || __DEV__);
 const wanted = (p: Plugin) => p.locked || (saved[p.id] ?? !p.dev);
 const active = listed.filter(wanted);
 const isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
-const isCart = !!$('#order-items') && !!$('#order-summary-column');
-// Off the cart, only the site header, search results, footer and settings gear run, plus Redlines in the dev build.
-const here = isCart ? active : active.filter((p) => [header, search, footer, settings, redlines].includes(p));
+// Checkout reuses the cart's ids, so its address is the tell.
+const hasItems = !!$('#order-items') && !!$('#order-summary-column');
+const isCheckout = hasItems && /SinglePageCheckout/i.test(location.pathname);
+const isCart = hasItems && !isCheckout;
+// Off the cart, only the site header, search results, checkout, footer and settings gear run, plus Redlines in the dev build.
+// Checkout also gets the order review panel.
+const here = isCart ? active : active.filter((p) => [header, search, checkout, footer, settings, redlines, ...(isCheckout ? [panel] : [])].includes(p));
 
 function setOn(on: boolean) {
   document.documentElement.classList.toggle('cm-on', on);
@@ -45,7 +50,7 @@ function render() {
   observer?.disconnect();
   $$('.cm-extra').forEach((n) => n.remove());
   const ctx: Ctx = { ...base, items: readItems() };
-  for (const p of active) p.render?.(ctx);
+  for (const p of here) p.render?.(ctx);
   observer ??= new MutationObserver(() => { clearTimeout(timer); timer = window.setTimeout(render, 150); });
   for (const s of ['#order-items', '#order-summary-column']) { const n = $(s); if (n) observer.observe(n, { childList: true, subtree: true, characterData: true }); }
 }
@@ -77,5 +82,5 @@ if (here.length) {
   const ctx: Ctx = { ...base, items: [] };
   for (const p of here) p.setup?.(ctx);
   setOn(!flag.get('cm-off'));
-  if (isCart) render();
+  if (hasItems) render();
 }

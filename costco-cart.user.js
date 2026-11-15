@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Costco Cart, Cleaned Up
 // @namespace    https://github.com/sushruth/costco-mod
-// @version      0.4.1
+// @version      0.4.2
 // @description  Restyles the costco.com cart in place: compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.
 // @match        https://www.costco.com/CheckoutCartDisplayView*
 // @match        https://www.costco.com/CheckoutCartView*

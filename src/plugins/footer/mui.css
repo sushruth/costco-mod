@@ -42,9 +42,14 @@
   /* legal links on one line, the copyright under them, both centered */
   & > div:last-child {
     padding:10px 0 0 !important; margin:0 !important; gap:4px; align-items:center;
+    & div { padding-block:0 !important; margin-block:0 !important; min-height:0 !important; }
     & > div { padding:0 !important; margin:0 !important; }
+    & > div:has(a[aria-label*=Facebook]), & > div:has(a[aria-label*=Facebook]) > div { display:contents !important; }
     & ul { margin:0 !important; padding:0 !important; justify-content:center; flex-wrap:wrap; gap:4px 16px; }
-    & li { margin:0 !important; padding:0 !important; }
+    & li { margin:0 !important; padding:0 !important; min-height:0 !important; height:auto !important; }
+    & ul { align-items:center !important; }
+    & li :is(button, a) { min-height:0 !important; height:auto !important; padding:0 !important; }
+    & li img { width:24px !important; height:12px !important; margin-right:4px; }
     & * { font-size:12px !important; line-height:18px !important; }
     /* social and app icons ride at the right end of the tools strip, as Phosphor icons like the cart's */
     & ul:has(a[aria-label*=Facebook]) {

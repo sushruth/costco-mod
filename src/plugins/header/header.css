@@ -15,7 +15,7 @@
       & li { border:0 !important; display:flex !important; align-items:center; margin:0 !important; padding:0 !important; height:36px; }
       & li::after { content:none !important; display:none !important; }
       /* links: blue 14px, short grey dividers */
-      & :is(li > a, li > button):not(#cart-d, .cm-gear) { font-size:14px !important; line-height:20px !important; color:var(--cm-blue) !important; padding:0 12px !important; white-space:nowrap; }
+      & :is(li > a, li > button):not(#cart-d, .cm-gear, [style*="display: none"]) { display:inline-flex !important; align-items:center; height:36px; font-size:14px !important; line-height:20px !important; color:var(--cm-blue) !important; padding:0 12px !important; white-space:nowrap; }
       & li + li::before, & #banner-list-actions + ul > li:first-child::before { content:""; width:1px; height:14px; background:var(--cm-line-strong); }
       & li:has(> #cart-d)::before, & li:has(.cm-gear)::before { content:none !important; }
       & li:has(.cm-gear) { margin-left:8px !important; }
@@ -50,6 +50,7 @@
       & > i { display:none !important; }
       &::before { content:"\e2f0"; font-family:Phosphor; font-size:20px; font-weight:400; line-height:1; }
     }
+    & .nav-item > a { display:inline-flex !important; align-items:center; height:36px; }
     & :is(.nav-item > a, #navigation-dropdown) { font-size:14px !important; line-height:20px !important; padding:0 !important; }
   }
 

@@ -17,9 +17,11 @@
     /* account links like the cart: 14px blue, short grey dividers, Cart as an outlined button */
     & nav[data-testid=LinkList] {
       & > ul { margin:0 40px 0 0 !important; align-items:center; } /* room for the settings gear */
-      & li { position:relative; height:36px !important; width:auto !important; min-width:0 !important; padding:0 12px !important; border:0 !important; display:flex !important; align-items:center; }
+      & li { position:relative; height:36px !important; width:auto !important; min-width:0 !important; padding:0 !important; border:0 !important; display:flex !important; align-items:center; }
+      /* the link is the whole clickable box, like the cart's */
+      & li > :is(a, button):not([data-testid=cart-link]) { height:36px !important; min-height:0 !important; min-width:0 !important; padding:0 12px !important; display:inline-flex !important; align-items:center; }
       & li + li::before { content:""; position:absolute; left:0; top:11px; width:1px; height:14px; background:var(--cm-line-strong); }
-      & li:has([data-testid=cart-link]) { padding-right:0 !important; &::before { content:none; } }
+      & li:has([data-testid=cart-link]) { &::before { content:none; } }
       & :is(a, button, div) { font-size:14px !important; line-height:20px !important; }
       /* Phosphor cart, label, then the count as a pill */
       & [data-testid=cart-link] {

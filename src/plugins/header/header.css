@@ -40,6 +40,21 @@
       display:inline-flex !important; align-items:center; gap:4px; }
     & #navigation-dropdown { padding-left:0 !important; }
     & .nav-item[data-cm-overflow] { display:none !important; }
+    /* Shop sits at the far left; its menu opens as a full-height left sidebar */
+    & #navigation-dropdown { position:absolute !important; left:12px; top:0; }
     & :is(.nav-item > a, #navigation-dropdown) { font-size:14px !important; line-height:20px !important; padding:0 !important; }
+  }
+
+  /* open Shop menu: a full-height left sidebar under the Shop button, which stays on top */
+  &:has(#navigation-dropdown[aria-expanded=true]) {
+    /* layers over Costco's white row (z 20011): dimming, then the sidebar, then the blue row with Shop */
+    & #navigation-overlay-div-element { z-index:20012 !important; background:none !important; }
+    & #navigation-v2-category-container {
+      position:fixed !important; inset:0 auto 0 0 !important; width:auto !important; height:100vh !important; z-index:20013 !important;
+    }
+    & #navigation-widget { z-index:20014; }
+    & #navigation-v2-category { width:auto !important; max-width:none !important; margin:0 !important; padding:0 !important; height:100vh !important; }
+    & .navigation-category-level { height:100vh !important; overflow-y:auto; padding-top:44px !important; background:#fff; }
+    & #level1 { width:300px !important; flex:none; box-shadow:1px 0 0 var(--cm-line), 4px 0 12px rgb(0 0 0 / .12); }
   }
 }

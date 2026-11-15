@@ -23,7 +23,19 @@
     grid-row:1; grid-column:1; background:var(--cm-blue) !important; height:36px;
     & > div { background:none !important; }
     & > div, & > div > nav { height:36px !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; }
-    & > div > nav { width:100%; box-sizing:border-box; padding-left:var(--cm-edge) !important; }
+    position:relative;
+    & > div > nav { width:100%; box-sizing:border-box; padding-left:max(var(--cm-edge), 108px) !important; }
+    /* Shop sits at the far left; its menu opens as a full-height left sidebar */
+    & > div > nav > ul > li:has([data-testid=ShopMenu]) { position:absolute !important; left:12px; top:0; }
+    & [data-testid=ShopMenu] > button { z-index:1301 !important; }
+    /* no caret toggle beside each category */
+    & > div > nav > ul > li > button + button { display:none !important; }
+    & [data-testid=ShopMenu]:has(> button[aria-expanded=true]) > div:not([data-testid]) {
+      position:fixed !important; inset:0 auto 0 0 !important; height:100vh !important; width:max-content !important; z-index:1300 !important;
+      & > [data-testid=PopoverMenu] { height:100vh !important; width:300px !important; flex:none !important; }
+      & > [data-testid=shop-menu-backdrop] { background:none !important; }
+      & > [data-testid=PopoverMenu] > div { height:100vh !important; width:300px !important; overflow-y:auto; border-radius:0 !important; box-sizing:border-box; padding-top:36px !important; box-shadow:1px 0 0 var(--cm-line), 4px 0 12px rgb(0 0 0 / .12) !important; }
+    }
     & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }
     & > div > nav > ul > li { height:36px !important; min-height:0 !important; }
     & > div > nav > ul > li > :is(a, button, div) > :is(a, button), & > div > nav > ul > li > :is(a, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }

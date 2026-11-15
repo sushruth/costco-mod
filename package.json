@@ -1,6 +1,6 @@
 {
   "name": "costco-mod",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Restyles the costco.com cart in place: compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.",
   "private": true,
   "type": "module",

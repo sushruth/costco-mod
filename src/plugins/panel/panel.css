@@ -6,7 +6,7 @@
   @media (width <= 1024px) { & #cart-body { padding-bottom:96px; } }
 
   & #order-summary-body {
-    border:1px solid var(--cm-line) !important; border-top:0 !important; border-radius:0 0 4px 4px; background:#fff !important; box-shadow:none !important;
+    border-width:0 1px 1px !important; border-style:solid !important; border-color:var(--cm-line) !important; border-radius:0 0 4px 4px; background:#fff !important; box-shadow:none !important;
     margin-top:0 !important; padding:4px 20px 16px !important;
     & :is(.summary-left, .summary-right, .order-estimated, .order-estimated *) { font-size:14px !important; line-height:20px !important; margin-bottom:6px !important; }
     & .estimated-total-label { font-size:18px !important; line-height:24px !important; font-weight:700 !important; }

@@ -14,7 +14,7 @@ html.cm-on #cart { padding-top:16px !important; }
 html.cm-on #cart-title { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; margin:0 !important; }
 html.cm-on #cart-region:not(:has(.alert-notification:not(.hidden))) { display:none; }
 html.cm-on .cm-hide, html.cm-on #cart-body .cm-hide { display:none !important; }
-html:not(.cm-on) #cart-body [data-cm] { display:none !important; }
+html:not(.cm-on) :is(#cart-body, footer) [data-cm] { display:none !important; }
 .cm-ic { font-size:18px; line-height:1; vertical-align:-3px; }
 
 /* shared pieces */

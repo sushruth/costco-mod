@@ -48,7 +48,7 @@
   /* open Shop menu: a full-height left sidebar under the Shop button, which stays on top */
   &:has(#navigation-dropdown[aria-expanded=true]) {
     /* layers over Costco's white row (z 20011): dimming, then the sidebar, then the blue row with Shop */
-    & #navigation-overlay-div-element { z-index:20012 !important; background:none !important; }
+    & #navigation-overlay-div-element { z-index:20012 !important; background:none !important; pointer-events:none !important; }
     & #navigation-v2-category-container {
       position:fixed !important; inset:0 auto 0 0 !important; width:auto !important; height:100vh !important; z-index:20013 !important;
     }

@@ -34,7 +34,7 @@
       position:fixed !important; inset:0 auto 0 0 !important; height:100vh !important; width:max-content !important; z-index:1300 !important;
       & > [data-testid=PopoverMenu] { height:100vh !important; width:max-content !important; margin:0 !important; flex:none !important; }
       & > [data-testid=PopoverMenu] > div:first-child { width:300px !important; }
-      & > [data-testid=shop-menu-backdrop] { background:none !important; }
+      & > [data-testid=shop-menu-backdrop] { background:none !important; pointer-events:none !important; }
       & > [data-testid=PopoverMenu] > div { height:100vh !important; width:260px !important; flex:none !important; overflow-y:auto; border-radius:0 !important; box-sizing:border-box; padding-top:36px !important; box-shadow:1px 0 0 var(--cm-line), 4px 0 12px rgb(0 0 0 / .12) !important; }
     }
     & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }

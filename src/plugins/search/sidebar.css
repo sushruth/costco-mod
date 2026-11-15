@@ -1,0 +1,61 @@
+/* Filter sidebar on search and category pages: narrower, 13px rows at a 24px pitch, small headings,
+   plain links with muted counts. It sticks below the header and scrolls on its own. */
+:root.cm-on.cm-p-search [data-testid=left-column] {
+  flex:none !important; width:232px !important; min-width:0 !important; margin-right:24px !important; padding-right:12px !important; box-sizing:border-box;
+  /* scrollbar left to the OS: hidden until scrolling, unless "always show scrollbars" is on */
+  position:sticky; top:12px; align-self:flex-start; max-height:calc(100vh - 24px); overflow-y:auto; overscroll-behavior:contain;
+
+  & > div > div > div:first-child { min-height:0 !important; height:40px !important; padding:0 !important; margin:0 !important; align-items:center; border-bottom:1px solid var(--cm-line-strong);
+    & h2 { font-size:15px !important; line-height:20px !important; font-weight:600 !important; margin:0 !important; }
+    & button { min-height:0 !important; height:auto !important; padding:0 !important; font-size:12px !important; line-height:16px !important; } }
+
+  & [data-testid^=Accordion_] { margin:0 !important; box-shadow:none !important; background:none !important; border-width:0 0 1px !important; border-style:solid !important; border-color:var(--cm-line) !important;
+    &:last-child { border-bottom-width:0 !important; }
+    &::before { display:none !important; }
+    & .MuiAccordionSummary-root { min-height:0 !important; height:auto !important; padding:10px 0 6px !important; }
+    & .MuiAccordionSummary-content { margin:0 !important; }
+    & .MuiAccordionSummary-content, & .MuiAccordionSummary-content * { font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
+    & .MuiAccordionSummary-expandIconWrapper svg { width:14px !important; height:14px !important; }
+    & .MuiAccordionDetails-root { padding:0 0 8px !important; }
+  }
+
+  & li { margin:0 !important; padding:0 !important; min-height:0 !important; }
+  & li, & li * { font-size:13px !important; line-height:18px !important; }
+  & li > div { min-height:24px; display:flex !important; align-items:center; justify-content:space-between; gap:8px; }
+  & li a { display:flex !important; width:100%; justify-content:space-between; gap:8px; padding:3px 0 !important; text-decoration:none !important; color:var(--cm-ink-2) !important;
+    &:hover { color:var(--cm-blue) !important; & span:first-child { text-decoration:underline; } } }
+  & li a span:last-child, & li > div > div:last-child { color:var(--cm-ink-3) !important; font-size:12px !important; }
+  & label { min-height:0 !important; margin:0 !important; padding:3px 0 !important; gap:8px; align-items:center; }
+  & [data-testid=Checkbox] { padding:0 !important; margin:0 !important;
+    & svg { width:16px !important; height:16px !important; } }
+  & li > div > div:first-child { display:flex; align-items:center; }
+  & [data-testid=Button]:not([data-testid=Button_clear-all-filters]) { min-height:0 !important; height:auto !important; padding:4px 0 0 !important; font-size:12px !important; line-height:16px !important; }
+  & [data-testid=Rating] svg { width:14px !important; height:14px !important; }
+}
+
+/* Size groups as chips that wrap: the checkbox stays, invisible, over the whole chip. */
+:root.cm-on.cm-p-search [data-testid=left-column] [data-testid^=Accordion_][data-testid*=size] {
+  & ul { display:flex !important; flex-wrap:wrap; gap:6px; padding-top:2px !important; }
+  & li:not([style*="display: none"]) { display:block !important; width:auto !important; } /* Costco's Show more still collapses the rest */
+  & li > div { min-height:0 !important; display:block !important; }
+  & li div[aria-hidden=true] { display:none !important; } /* counts, kept in the chip's hover title */
+  & label { position:relative; display:inline-flex !important; align-items:center; gap:0 !important; height:26px; padding:0 10px !important; box-sizing:border-box;
+    border:1px solid var(--cm-line-strong); border-radius:13px; color:var(--cm-ink-2); cursor:pointer;
+    &:hover { border-color:var(--cm-blue); color:var(--cm-blue); }
+    &:has(input:checked) { border-color:var(--cm-blue); background:var(--cm-blue); color:#fff; } }
+  & label [data-testid=Checkbox] { position:static !important; width:0; overflow:visible; margin:0 !important;
+    & svg { display:none !important; }
+    & input { position:absolute !important; inset:0; width:100% !important; height:100% !important; margin:0 !important; opacity:0; cursor:pointer; z-index:1; } }
+  & label [data-testid=Text] div:last-child:not(:has(*)):not(:first-child) { display:none !important; } /* "N results" */
+  & label, & label * { font-size:12px !important; line-height:16px !important; color:inherit !important; }
+  & label [data-testid=Text] { margin:0 !important; padding:0 !important; }
+  & [data-testid=Button] { margin-top:6px !important; }
+}
+
+/* Delivery Location and My Warehouse: the ZIP or warehouse sits right over its checkboxes */
+:root.cm-on.cm-p-search [data-testid=left-column] {
+  & .MuiAccordionDetails-root > div:has([data-testid^=locationselector_]) { padding:0 0 2px !important; }
+  & [data-testid^=Button_locationselector_] { &, & * { font-size:13px !important; line-height:18px !important; } & svg { width:16px !important; height:16px !important; } }
+  /* Show Out of Stock Items: its own rule doubles the accordion's border above it */
+  & div:has(> hr[data-testid=Divider] + ul[data-testid=List]) { padding:4px 0 !important; border-bottom:1px solid var(--cm-line); & > hr { display:none !important; } & > ul { margin:0 !important; } }
+}

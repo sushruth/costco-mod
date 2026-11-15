@@ -11,11 +11,12 @@ import { pairing } from './plugins/pairing';
 import { panel } from './plugins/panel';
 import { promos } from './plugins/promos';
 import { redlines } from './plugins/redlines';
+import { search } from './plugins/search';
 import { services } from './plugins/services';
 import { settings } from './plugins/settings';
 
 // Order matters: pairing reorders items before the plugins that draw them.
-const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, footer, settings, redlines];
+const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, search, footer, settings, redlines];
 
 declare const __CM_CSS__: string; // the bundled CSS, inlined by dev/build.ts
 
@@ -29,8 +30,8 @@ const wanted = (p: Plugin) => p.locked || (saved[p.id] ?? !p.dev);
 const active = listed.filter(wanted);
 const isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
 const isCart = !!$('#order-items') && !!$('#order-summary-column');
-// Off the cart, only the site header, footer and settings gear run, plus Redlines in the dev build.
-const here = isCart ? active : active.filter((p) => [header, footer, settings, redlines].includes(p));
+// Off the cart, only the site header, search results, footer and settings gear run, plus Redlines in the dev build.
+const here = isCart ? active : active.filter((p) => [header, search, footer, settings, redlines].includes(p));
 
 function setOn(on: boolean) {
   document.documentElement.classList.toggle('cm-on', on);

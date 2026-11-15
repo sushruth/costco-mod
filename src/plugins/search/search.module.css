@@ -1,0 +1,2 @@
+.unit { font-size:11px; line-height:14px; color:var(--cm-ink-3); white-space:nowrap;
+  & b { color:var(--cm-green); font-weight:600; } }

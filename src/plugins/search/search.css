@@ -1,0 +1,143 @@
+/* Search and category result tiles (React). CSS only on Costco's nodes: rounded image with badges on it, title,
+   rating with availability icons at the right, then price and unit price on the left and an icon cart button on the right. */
+/* Results column only: the home page's product carousels reuse the same tiles. */
+:root.cm-on.cm-p-search [data-testid=main-column] {
+  [data-testid=Grid]:has(> [data-testid=Grid] [data-testid^=ProductTile_]) {
+    display:grid !important; grid-template-columns:repeat(auto-fill, minmax(176px, 1fr)); gap:40px 28px !important; margin:0 !important; width:auto !important;
+    & > [data-testid=Grid] { display:block !important; max-width:none !important; width:auto !important; flex:none !important; padding:0 !important; margin:0 !important; height:auto !important; border:0 !important; }
+    & > [data-testid=Grid]:empty { display:none !important; } /* empty ad slots */
+    border:0 !important; /* the rule under the grid is the Divider after it */
+  }
+
+  [data-testid^=ProductTile_] {
+    --ink-3:var(--cm-ink-3); --ok:var(--cm-green);
+    position:relative; container-type:inline-size; height:100%; box-sizing:border-box; padding:0 !important; margin:0 !important; border:0 !important; background:none !important; box-shadow:none !important;
+    display:grid !important; grid-template-columns:minmax(0, 1fr) auto auto; grid-template-rows:auto auto auto 1fr auto; column-gap:6px; row-gap:0 !important; align-items:center;    /* the wrappers step aside so each part is a grid item */
+    & > div:nth-child(2), & > div:nth-child(2) > div:last-child, & > div:last-child, & [data-testid^=ProductDeliveryBadge_] { display:contents !important; }
+    & > div:last-child > span:last-child { display:none !important; }
+
+    & [data-testid^=ProductImage_] { grid-column:1 / -1; grid-row:1; width:100% !important; height:auto !important; aspect-ratio:1; margin:0 0 10px !important; box-sizing:border-box; border-radius:8px; overflow:hidden;
+      box-shadow:0 1px 2px rgb(0 0 0 / .06), 0 4px 14px rgb(0 0 0 / .07); } /* a soft edge for white photos on a white page */
+    & [data-testid^=ProductImage_] img { width:100% !important; height:100% !important; object-fit:contain; padding:0 !important; border-radius:8px; }
+
+    & [data-testid^=ProductInfo_] { grid-column:1 / -1; grid-row:2; margin:0 !important; padding:0 !important; }
+    & h3 { margin:0 !important; font-size:14px !important; line-height:18px !important; font-weight:400 !important; display:-webkit-box !important; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+    & [data-testid^=ProductRating_] { grid-column:1; grid-row:3; height:22px; margin:4px 0 0 !important; display:flex; align-items:center; gap:4px; &, & * { white-space:nowrap; flex-wrap:nowrap !important; } }
+    & [data-testid^=ProductRating_] svg { width:12px !important; height:12px !important; }
+    & [data-testid^=ProductRating_] span { font-size:12px !important; line-height:16px !important; color:var(--ink-3); }
+
+    & [data-testid^=PriceGroup_] { grid-column:1 / 3; grid-row:5; align-self:start; margin:10px 0 0 !important; padding:0 !important; height:auto !important; min-height:0 !important; display:flex; flex-direction:column; align-items:flex-start; }
+    & [data-testid^=priceTooltipBox_] { display:none !important; } /* "Online Price ⓘ" */
+    & [data-testid^=Text_Price_] { font-size:17px !important; line-height:22px !important; font-weight:700 !important; }
+    & [data-testid^=Text_promoText_], & [data-testid^=Text_promoText_] * { margin:0 !important; font-size:11px !important; line-height:14px !important; font-weight:600 !important; color:var(--ok) !important; }
+
+    /* badges on the image: Costco's slanted text pills (Online Only, Costco Direct, Holiday Savings...) flush in the
+       top-left corner, wrapping under each other; 2-Day as a truck icon bottom-left; Add to List top-right */
+    /* one pill comes in a div, several in ul[PillBadges_] > li */
+    & > div:nth-child(2) > div:last-child > :first-child:has([data-testid^=PillBadge_]) {
+      position:absolute; top:0; left:0; right:28px; z-index:2; margin:0 !important; padding:0 !important; list-style:none; display:flex !important; flex-direction:column; align-items:flex-start; gap:0 !important;
+      & [data-testid^=PillBadge_] { display:flex; margin:0 !important; }
+      & [data-cm-loud="1"] { order:-1; } /* set in index.ts: red and black pills first */
+      & a { margin:0 !important; display:flex !important; } /* a block link adds a line box under its 20px pill */
+      & :is(a, a *) { font-size:11px !important; line-height:16px !important; }
+      /* square left edge, pill-capped right end (Costco's slant is a clip-path); the top one follows the image's corner */
+      & a > div { clip-path:none !important; padding:2px 8px 2px 6px !important; border-radius:0 999px 999px 0 !important;
+        align-items:center !important; & > div { height:auto !important; } /* Costco stretches the text box; its 16px line sat at the top */
+        /* a thin light edge sets each pill off the photo and from the pill under it; none on the image's edge */
+        border-style:solid !important; border-color:rgb(255 255 255 / .7) !important; border-width:1px 1px 1px 0 !important;
+        & > div:last-child:empty { display:none !important; } } /* the slant's 12px spacer */
+      /* the top pill: the first red one, or the first pill when none is red (red ones are ordered first) */
+      &:has(> [data-cm-loud="1"]) > [data-cm-loud="1"]:not([data-cm-loud="1"] ~ *),
+      &:not(:has(> [data-cm-loud="1"])) > :first-child { & a > div { border-top-left-radius:8px !important; } } }
+    & [data-testid^=Link_ProductDeliveryBadge_] { position:absolute; left:6px; top:calc(100cqw - 30px); z-index:2;
+      display:grid !important; place-items:center; width:24px; height:24px; padding:0 !important; border-radius:6px; font-size:0 !important;
+      text-decoration:none !important; background:#fff !important; color:var(--cm-blue) !important; box-shadow:0 1px 3px rgb(0 0 0 / .15);
+      &::before { font-family:Phosphor; font-size:15px; line-height:1; }
+      & * { display:none !important; } }
+    & [data-testid^=Link_ProductDeliveryBadge_]::before { content:"\e4b4"; } /* truck */
+    & [data-testid^=AddToListButtonAddToList_] {
+      /* flush in the image's top-right corner, mirroring the Online Only badge on the left */
+      position:absolute !important; top:0; right:0; z-index:2; display:grid !important; place-items:center; width:28px !important; height:24px !important; min-width:0 !important; min-height:0 !important;
+      padding:0 !important; border-radius:0 8px 0 6px !important; background:#fff !important; color:var(--cm-blue) !important; font-size:0;
+      box-shadow:0 1px 3px rgb(0 0 0 / .15); opacity:0; transition:opacity .12s;
+      &::before { content:"\e2f8"; font-family:Phosphor; font-size:15px; line-height:1; }
+      &:hover { background:var(--cm-blue-tint) !important; }
+    }
+    /* Add to List shows on the tile under the pointer, or when focused */
+    &:is(:hover, :focus-within) [data-testid^=AddToListButtonAddToList_], & [data-testid^=AddToListButtonAddToList_]:focus-visible { opacity:1; }
+    & :is([data-testid^=AddToListButtonAddToList_], [data-testid^=PillBadge_], [data-testid^=AvailabilityInfo_], [data-testid^=Checkbox]) svg { display:none !important; }
+
+    /* rating row, right end: delivery and warehouse (green when available), then Compare */
+    /* z-index: above Costco's tile-wide product link, so these icons get their own hover titles */
+    & [data-testid^=AvailabilityInfo_] { position:relative; z-index:2; grid-column:2 / -1; grid-row:3; justify-self:end; align-self:center; margin:4px 0 0 !important; padding:0 !important; display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; gap:8px !important;
+      & > div { margin:0 !important; padding:0 !important; display:flex !important; } }
+    &:has([data-testid^=Checkbox]) [data-testid^=AvailabilityInfo_] { margin-right:24px !important; } /* Compare's 16px icon and an 8px gap */
+    & :is([data-testid^=DeliveryChannelBadge_], [data-testid^=WarehouseChannelBadge_]) {
+      display:grid !important; place-items:center; height:22px; margin:0 !important; padding:0 !important; color:var(--ok);
+      & > div { display:none !important; }
+      &::before { font-family:Phosphor; font-size:16px; line-height:1; }
+    }
+    & [data-testid^=DeliveryChannelBadge_]::before { content:"\e390"; } /* package */
+    & [data-testid^=WarehouseChannelBadge_]::before { content:"\ecd4"; } /* warehouse */
+    & > div:last-child > div:has([data-testid^=Checkbox]) { grid-column:3; grid-row:3; justify-self:end; align-self:center; margin:4px 0 0 !important; padding:0 !important;
+      & > div { position:relative; display:grid; place-items:center; height:22px; margin:0 !important; padding:0 !important; }
+      & label { display:none !important; } }
+    & [data-testid^=Checkbox] {
+      position:static !important; display:grid !important; place-items:center; height:22px; margin:0 !important; padding:0 !important; border-radius:4px; color:var(--ink-3);
+      &::before { content:"\e750"; font-family:Phosphor; font-size:16px; line-height:1; } /* scales */
+      & input { position:absolute !important; inset:0 !important; z-index:1; width:100% !important; height:100% !important; margin:0 !important; opacity:0 !important; cursor:pointer; }
+      &:has(input:checked) { color:var(--cm-blue); }
+    }
+
+    /* bottom right: Add to Cart, or Select Options for items with choices, as an icon button. Flex: the label text
+       node (font-size 0) would take its own row in a grid and push the icon up. */
+    & > div:last-child > :is(div:has([data-testid^=addToCartBtn-]), [data-testid^=Button_ProductDetailsButton]) {
+      grid-column:3; grid-row:5; justify-self:end; align-self:start; margin:5px 0 0 !important; padding:0 !important; display:flex !important; /* centred on the 22px price line, with or without a unit price under it */
+      & * { margin:0 !important; } }
+    & > div:last-child > div:has([data-testid^=addToCartBtn-]) { width:auto !important; }
+    & :is([data-testid^=addToCartBtn-], [data-testid^=Button_ProductDetailsButton]) {
+      display:flex !important; align-items:center; justify-content:center; width:36px !important; min-width:0 !important; height:32px !important; min-height:0 !important; padding:0 !important;
+      font-size:0 !important; border-radius:6px !important; box-shadow:none !important;
+      /* outlined at rest; solid blue only for the tile under the pointer, so one primary button shows at a time */
+      border-width:1px !important; border-style:solid !important; border-color:var(--cm-line-strong) !important; background:none !important; color:var(--cm-blue) !important;
+      & * { display:none !important; }
+      &::before { content:"\e420"; display:block; font-family:Phosphor; font-size:18px; line-height:1; } /* cart */
+    }
+    &:is(:hover, :focus-within) :is([data-testid^=addToCartBtn-], [data-testid^=Button_ProductDetailsButton]) {
+      background:var(--cm-blue) !important; border-color:var(--cm-blue) !important; color:#fff !important;
+      &:hover { background:var(--cm-blue-dark) !important; border-color:var(--cm-blue-dark) !important; } }
+    & [data-testid^=Button_ProductDetailsButton]::before { content:"\e434"; } /* sliders */
+    /* Add to Cart uses the cart-plus SVG that index.ts adds */
+    & [data-testid^=addToCartBtn-] { &::before { content:none !important; } & > svg[data-cm] { display:block !important; width:20px; height:20px; & * { display:inline !important; } } }  }
+}
+
+/* Above the grid: one row with the result count and Sort By, level with the sidebar's heading, then one rule. */
+:root.cm-on.cm-p-search [data-testid=main-column] {
+  & > div:empty { display:none !important; }
+  & > div:first-child { margin:0 !important; }
+  & > div:has(> hr[data-testid=Divider]):not(:has([data-testid^=ProductTile_], nav)) { display:none !important; }
+  /* no rules below the results: the pager and Back to Top end the column */
+  & > [data-testid=Grid] ~ hr[data-testid=Divider], & > div:has(> nav[aria-label=pagination]) > hr { display:none !important; }
+  /* pager centred under the grid, Back to Top as a small link at the same height on the right */
+  & > div:has(> nav[aria-label=pagination]) { position:relative; margin-top:24px !important; padding:0 !important; display:flex !important; justify-content:center; align-items:center; min-height:32px;
+    & nav, & ul { margin:0 !important; padding:0 !important; }
+    & ul { gap:4px; }
+    & li button { min-width:32px !important; height:32px !important; padding:0 6px !important; margin:0 !important; border-radius:4px !important; font-size:13px !important; }
+    & > div:has([data-testid=BackToTopLink]) { position:absolute; right:0; top:50%; transform:translateY(-50%); margin:0 !important; padding:0 !important; }
+    & [data-testid=BackToTopLink] { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3) !important; } }
+  & > div:has(> [data-testid=searchResults-heading]) { height:39px; /* its rule lines up with the sidebar heading's */ min-height:0 !important; align-items:center !important; }
+  & > div:has(> [data-testid=selectedFacets]:empty) { display:none !important; } /* holds chips once filters are picked */
+  & [data-testid=searchResults-heading] { margin:0 !important; font-size:14px !important; line-height:20px !important; }
+  /* Sort By as a small box like the cart's quantity box: 28px, grey line, "Sort:" before the choice */
+  & .MuiFormControl-root:has([data-testid=Select_sort_by]) { display:flex !important; height:28px !important; width:fit-content !important; min-width:0 !important; margin-left:auto !important;
+    & > label { display:none !important; } }
+  /* Costco's is a native <select>, which takes no ::before, so "Sort:" sits on its wrapper */
+  & [data-testid=Select_sort_by] { height:28px !important; font-size:13px !important; border-radius:4px !important; padding-left:10px !important;
+    &::before { content:"Sort:"; font-size:13px; color:var(--cm-ink-3); margin-right:4px; }
+    & select { min-height:0 !important; height:28px !important; line-height:28px !important; padding:0 28px 0 0 !important; box-sizing:border-box; font-size:13px !important; color:var(--cm-ink) !important; }
+    & svg { width:16px !important; height:16px !important; right:8px !important; top:calc(50% - 8px) !important; }
+    & .MuiOutlinedInput-notchedOutline { top:0 !important; border:1px solid var(--cm-line-strong) !important; border-radius:4px !important; & legend { display:none !important; } } }
+  & > hr[data-testid=Divider] { margin:0 0 16px !important; }
+  & > hr[data-testid=Divider]:last-of-type:not(:first-of-type) { margin:24px 0 0 !important; }
+}

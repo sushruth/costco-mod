@@ -1,0 +1,25 @@
+/* Price slider: two native range inputs stacked on one track; only their thumbs take the pointer. */
+.price { padding:4px 2px 6px; }
+.priceLabel { font-size:13px; line-height:18px; font-weight:600; color:var(--cm-ink); margin-bottom:6px; }
+.track {
+  position:relative; height:20px;
+  &::before { content:""; position:absolute; left:0; right:0; top:9px; height:2px; border-radius:1px; background:var(--cm-line-strong); }
+  & input { position:absolute; inset:0; width:100%; margin:0; background:none; pointer-events:none; appearance:none; -webkit-appearance:none; }
+  & input::-webkit-slider-thumb { pointer-events:auto; -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--cm-blue); border:2px solid #fff; box-shadow:0 0 0 1px var(--cm-blue); cursor:pointer; }
+  & input::-moz-range-thumb { pointer-events:auto; width:12px; height:12px; border-radius:50%; background:var(--cm-blue); border:2px solid #fff; box-shadow:0 0 0 1px var(--cm-blue); cursor:pointer; }
+  & input::-moz-range-track { background:none; }
+  & input:focus-visible::-moz-range-thumb { outline:2px solid var(--cm-blue); outline-offset:2px; }
+}
+/* the bucket checkboxes stay in the page, out of sight */
+:global(:root.cm-on.cm-p-search) .hasSlider :global(.MuiAccordionDetails-root) > :not(.price) { display:none !important; }
+
+/* Member Reviews: four stars and a caption under them */
+.rating { padding:2px 0 6px; }
+.starRow { display:flex; gap:2px; }
+.star { width:24px; height:24px; padding:0; border:0; background:none; cursor:pointer; color:var(--cm-line-strong); display:grid; place-items:center;
+  & svg { width:20px; height:20px; stroke:var(--cm-line-strong); }
+  &.on { color:#FFCC00; & svg { stroke:#CA4D00; } } /* Costco's star colors */
+  &:focus-visible { outline:2px solid var(--cm-blue); outline-offset:1px; border-radius:4px; } }
+.caption { font-size:12px; line-height:16px; color:var(--cm-ink-3); margin-top:2px; }
+.preview { color:var(--cm-blue); }
+:global(:root.cm-on.cm-p-search) .hasStars :global(.MuiAccordionDetails-root) > :not(.rating) { display:none !important; }

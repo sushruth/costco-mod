@@ -1,6 +1,6 @@
 # Costco Cart, Cleaned Up
 
-Costco's cart page is long and hides what matters: when each promo ends, which days things arrive, and where the "Discount on Order" comes from. This userscript restyles the cart in place so those answers sit next to each item.
+This userscript makes the costco.com cart shorter and easier to scan.
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 
@@ -8,52 +8,27 @@ Costco's cart page is long and hides what matters: when each promo ends, which d
 | --- | --- |
 | <img src="docs/before.png" alt="Costco cart before" width="420"> | <img src="docs/after.png" alt="Costco cart after" width="420"> |
 
-Prices, ZIP code and warehouse are blurred in both screenshots.
+The screenshots blur prices, discounts, ZIP code and warehouse.
 
 ## Install
 
 1. Install a userscript manager: [Violentmonkey](https://violentmonkey.github.io/), [Tampermonkey](https://www.tampermonkey.net/), [ScriptCat](https://docs.scriptcat.org/) or [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) for Safari.
-2. Click **Install** above, or open this link, and confirm:
+2. Click **Install** above.
 
-```
-https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js
-```
-
-The manager checks that URL for updates. Tested with Violentmonkey in a Firefox-based browser; the other managers read the same `.user.js` format.
-
-## What changes
-
-- Each item is a compact card: title, item number, quantity stepper and icon buttons for remove, add to list and save for later.
-- The price sits bottom-right with the savings and the promo end date. Promos ending within a day get a red badge.
-- Delivery shows as one chip with the date; items with several options (delivery, pick-up and others) get a toggle that drives Costco's own radio buttons.
-- A protection plan that Costco auto-added with an item (like the Allstate plan with a TV) is drawn as one unit with that item.
-- The order panel lists every item with its promo end date, warns when items arrive on different days, and copies a plain-text summary.
-- **Discount on Order** is broken down by promo (multi-buy, spend-tier and bundle offers), with the items each one covers, and checked against Costco's total.
-- The site header is two rows: categories with your warehouse and ZIP in the blue bar, then logo, search, account links and cart.
-- The footer keeps every Costco link in about half the height.
-- **Original view** in the panel switches back to Costco's page at any time. The gear next to the cart turns each part on or off.
+The script is tested with Violentmonkey. To turn parts on or off, use the gear next to the cart.
 
 ## Privacy
 
-Everything stays in your browser. The script talks only to costco.com, with the same requests a product page makes when you open it, and stores what it learns (promo tiers, with a capture date and expiry) in your userscript manager's storage. No analytics, no third-party servers.
-
-The one outside request is made by your userscript manager at install time: it downloads the [Phosphor](https://phosphoricons.com/) icon font from unpkg, once.
+The script sends requests only to costco.com. It keeps what it learns in your browser. At install, your userscript manager downloads the [Phosphor](https://phosphoricons.com/) icon font from unpkg.com one time.
 
 ## Development
 
-The source is TypeScript and CSS in `src/`, one folder per feature in `src/plugins/`. [Bun](https://bun.sh) builds it into `costco-cart.user.js`.
-
 ```
 bun install
-bun run dev      # dev build, rebuilt on every change
-bun run build    # published build: costco-cart.user.js
-bun run check    # type-check
+bun run dev
 ```
 
-- `bun run dev` writes `dev/costco-cart.dev.user.js`, which has dev-only switches (like **Redlines**, which outlines every element by nesting depth) and no update URL. Serve the folder (`python3 -m http.server 8723`), open `http://127.0.0.1:8723/dev/costco-cart.dev.user.js`, tick **Track external edits** in Violentmonkey and keep that tab open.
-- `bun dev/preview.ts [saved-cart.html]` builds `cart.preview.html` from a cart page you saved, with Costco's scripts removed and this script injected.
-
-Saved cart pages contain your personal data and are git-ignored.
+CLAUDE.md has the architecture and workflow.
 
 ## License
 

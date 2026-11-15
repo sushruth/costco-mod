@@ -52,12 +52,12 @@
     & .remove-link { margin:0 !important; }
     & .wish-list { display:flex; gap:4px; margin:0; text-align:left; }
     & .wish-list > span { display:none; }
-    & :is(.remove-link, .wish-list) button {
+    & :is(.remove-link button, .wish-list button, .cm-rm) {
       font-size:0 !important; width:28px; height:28px; padding:0; border:0; background:none; color:var(--cm-ink-3);
       border-radius:4px; display:inline-flex; align-items:center; justify-content:center;
       & .cm-ic { font-size:18px; vertical-align:0; }
       &:hover { color:var(--cm-blue); background:var(--cm-surface-2); }
     }
-    & .remove-link button:hover { color:var(--cm-red); }
+    & :is(.remove-link button, .cm-rm):hover { color:var(--cm-red); }
   }
 }

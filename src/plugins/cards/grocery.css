@@ -1,0 +1,36 @@
+/* 2-Day Delivery groups: Costco's badge, note and free-delivery nudge become a compact header above the group's items:
+   an 18px badge, the note in small print, then the nudge in a light blue strip with a small outlined Add More. */
+:root.cm-on.cm-p-cards #order-items {
+  & .row:has(> .col-xs-12 > .cart-top-info .delivery-badge-holder) { margin-bottom:2px !important; & > * { height:auto !important; } }
+  & .delivery-badge-holder { display:inline-block; }
+  & .delivery-badge-holder img { height:18px !important; width:auto !important; margin:0 !important; }
+  & .grocery-div-delivery-options, & .grocery-div-delivery-options > [class*="col-"], & #grocery-section-header { margin:0 !important; padding:0 !important; }
+  & .grocery-header-text { margin:0 !important;
+    & p { margin:0 !important; }
+    & * { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3); }
+    & button { color:var(--cm-blue) !important; padding:0 !important; height:auto !important; }
+  }
+  & .grocery-header-summary-box {
+    display:flex; align-items:center; flex-wrap:wrap; gap:6px 16px; margin:6px 0 12px !important; padding:8px 12px !important;
+    background:var(--cm-blue-tint) !important; border:0 !important; border-radius:4px;
+    & * { font-size:13px !important; line-height:18px !important; }
+    & .custom_crumb p { margin:0 !important; }
+    & .a11y-tooltip { padding:0 !important; vertical-align:-2px; }
+  }
+  & .small-pack-edd-div:not(:has(*)) { display:none !important; }
+  & #order-items-grocery { margin-bottom:0 !important; }
+  & .grocery-add-more-items, & .grocery-add-more-items > div { width:auto !important; margin:0 !important; padding:0 !important; float:none !important; }
+  & .add-more-btn {
+    display:inline-flex !important; align-items:center; width:auto !important; min-width:0 !important; height:28px; margin:0 !important; padding:0 12px !important;
+    border:1px solid var(--cm-blue) !important; border-radius:4px; background:#fff !important; color:var(--cm-blue) !important; font-weight:600;
+    &:hover { background:var(--cm-blue-tint) !important; }
+  }
+}
+
+/* 2-Day items have no delivery-date column, so the details take the width and the price sits at the right. */
+@media (width > 1024px) {
+  :root.cm-on.cm-p-cards #order-items-grocery .order-item > .row {
+    grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"main price" "main price" "svc svc";
+    & > [class*="col-xl-5"]:not([class*="offset"]) { display:none; }
+  }
+}

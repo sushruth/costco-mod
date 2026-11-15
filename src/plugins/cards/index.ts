@@ -4,6 +4,7 @@ import { SAME_DAY, type Item } from '../../core/items';
 import type { Plugin } from '../../core/plugin';
 import './cards.css';
 import './grid.css';
+import './grocery.css';
 
 // Price line: Costco's two green lines become "Save $X" plus an end date beside the price.
 function priceLine(it: Item) {
@@ -23,13 +24,21 @@ function priceLine(it: Item) {
 
 // Actions: stepper, then remove / add to list / save for later as icon buttons on one row.
 function actions(c: HTMLElement) {
-  addIcon($('.remove-link button', c), 'trash');
+  const rm = $('.remove-link button, button[id^="removeItemLink-btn"]', c);
+  addIcon(rm, 'trash');
   const wl = $$('.wish-list button', c);
   addIcon(wl[0], 'list-plus');
   addIcon(wl[1], 'bookmark-simple');
   if (wl[1] && !wl[1].getAttribute('aria-label')) wl[1].setAttribute('aria-label', 'Save for Later');
   const stepRow = $('.quantity-selector-v2', c)?.parentElement, wlBox = $('.wish-list', c);
   if (stepRow && wlBox && wlBox.parentElement !== stepRow) { wlBox.parentElement?.classList.add('cm-hide'); stepRow.append(wlBox); }
+  // 2-Day Delivery items keep Remove on its own row, outside .remove-link; it joins the icons after the stepper.
+  if (rm && stepRow && !rm.closest('.remove-link') && rm.parentElement !== stepRow) {
+    rm.parentElement?.classList.add('cm-hide');
+    rm.classList.add('cm-rm');
+    if (!rm.getAttribute('aria-label')) rm.setAttribute('aria-label', 'Remove');
+    wlBox?.parentElement === stepRow ? wlBox.before(rm) : stepRow.append(rm);
+  }
   addIcon($('.quantity-selector-v2 button[id^="sub-"]', c), 'minus');
   addIcon($('.quantity-selector-v2 button[id^="add-"]', c), 'plus');
   $$('.a11y-tooltip', c).forEach((b) => addIcon(b, 'info'));

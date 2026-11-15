@@ -1,5 +1,6 @@
 import { $, $$, el, ic, text } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
+import { kv } from '../../core/store';
 import './header.css';
 import './flyouts.css';
 import './mui.css';
@@ -20,18 +21,41 @@ function fitNav() {
 let t = 0;
 const refit = () => { clearTimeout(t); t = window.setTimeout(fitNav, 50); };
 
-// Categories in the newer header's order. The old header has no Savings link, so ours points at the same page.
-const savings = el('div', { class: 'nav-item' }, el('a', { href: '/s?keyword=OFF&dept=All', class: 'nav-flyout' }, 'Savings'));
+// Category order comes from Costco's newer header: pages that have it save its list (label and link), and the
+// old header follows that list, adding any category it lacks. Without a saved list, Costco's own order stays.
+type NavItem = { label: string; href: string };
+const NAV = 'cm-nav';
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+function learnNav() {
+  const ul = $('header nav[data-testid=LinkList] > ul:has([data-testid=ShopMenu])');
+  if (!ul) return false;
+  const list = $$(':scope > li', ul).filter((li) => !$('[data-testid=ShopMenu]', li)).map((li) => {
+    const a = $<HTMLElement>(':scope > :is(a, button), :scope > div > :is(a, button)', li);
+    return { label: text(a), href: (a as HTMLAnchorElement | null)?.href ?? '' };
+  }).filter((n) => n.label);
+  if (list.length) kv.set(NAV, list);
+  return list.length > 0;
+}
+
+let original: Element[] = [];
+const added: Element[] = [];
 function order(on: boolean) {
-  const items = $$('#navigation-widget nav.menu > .nav-item:not(#navigation-dropdown)');
-  const by = (t: string) => items.find((n) => text(n).startsWith(t));
-  const deals = by('Black Friday'), grocery = by('Grocery'), sameDay = by('Same-Day');
-  if (on) {
-    if (deals && grocery) grocery.before(deals);
-    if (sameDay) sameDay.after(savings);
-  } else {
-    savings.remove();
-    if (deals && sameDay) sameDay.after(deals);
+  const shop = $('#navigation-dropdown');
+  if (!on) {
+    added.splice(0).forEach((n) => n.remove());
+    original.reduce<Element | null>((prev, n) => (prev?.after(n), n), shop);
+    return;
+  }
+  const saved = kv.get<NavItem[]>(NAV);
+  if (!shop || !saved?.length) return;
+  original = $$('#navigation-widget nav.menu > .nav-item:not(#navigation-dropdown)');
+  const byKey = new Map(original.map((n) => [key(text($('a', n))), n]));
+  let prev: Element = shop;
+  for (const s of saved) {
+    let n = byKey.get(key(s.label));
+    if (!n) { n = el('div', { class: 'nav-item' }, el('a', { href: s.href, class: 'nav-flyout' }, s.label)); added.push(n); }
+    prev.after(n);
+    prev = n;
   }
 }
 
@@ -94,6 +118,8 @@ export const header: Plugin = {
     addEventListener('resize', refit);
     holdShopMenu();
     hoursPopup();
+    // React fills the newer header after the script starts, so learn on the first pointer move if not yet.
+    if (!$('#header-widget') && !learnNav()) addEventListener('pointerover', learnNav, { once: true });
   },
   toggle: place,
 };

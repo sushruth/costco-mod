@@ -99,7 +99,7 @@
       content:attr(data-cm-hours); white-space:pre; font-size:12px !important; line-height:18px !important; font-weight:400 !important; color:#fff;
       background:var(--cm-blue-dark); box-shadow:0 2px 6px rgb(0 0 0 / .25);
     }
-    & [data-testid=Divider] { background:rgb(255 255 255 / .4) !important; height:14px !important; }
+    & [data-testid=Divider] { width:1px !important; height:14px !important; border:0 !important; background:rgb(255 255 255 / .4) !important; }
     /* short white dividers before ZIP and Lists, like the cart */
     & :is([data-testid=locationselector_DeliveryLocationSelector], nav > div:has([data-testid=Link_wishlist]))::before {
       content:""; width:1px; height:14px; margin:0 6px; background:rgb(255 255 255 / .4); }

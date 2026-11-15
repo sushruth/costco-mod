@@ -5,7 +5,7 @@
   & #header-widget {
     & ul.top-links { display:none !important; }
     & .table-container.parent { padding:8px 0 !important; }
-    & .right-cell { padding-top:0 !important; padding-inline:0 !important; }
+    & .right-cell { padding:0 !important; }
     & .logo { padding-right:20px !important; vertical-align:middle !important; }
     & .logo img { height:32px !important; width:auto !important; }
     & .account-cart {

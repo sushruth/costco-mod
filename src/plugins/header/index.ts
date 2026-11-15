@@ -5,6 +5,7 @@ import './header.css';
 import './flyouts.css';
 import './mui.css';
 import './search.css';
+import './mobile.css';
 import s from './header.module.css';
 
 // Site header: the blue category row moves above the logo row. Warehouse and ZIP sit on the cart's title row

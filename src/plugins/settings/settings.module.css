@@ -15,5 +15,8 @@
   & input { margin:0; accent-color:#005DAB; }
 }
 .sub { padding-left:20px; color:#5F5F5F; }
+/* Checkout's header: the gear follows Return to Cart and Customer Service. */
+.inline { list-style:none; margin:0 0 0 8px; padding:0; & > li { padding:0; border:0; background:none; } }
 /* Pages with Costco's newer header: the gear sits at the right end of the logo row (1440px wide, 24px in). */
-.floating { position:absolute; top:46px; right:max(24px, calc((100% - 1440px) / 2 + 24px)); z-index:20; list-style:none; margin:0; padding:0; }
+.floating { position:absolute; top:46px; right:max(24px, calc((100% - 1440px) / 2 + 24px)); z-index:20; list-style:none; margin:0; padding:0;
+  @media (width < 1024px) { top:46px; right:12px; } }

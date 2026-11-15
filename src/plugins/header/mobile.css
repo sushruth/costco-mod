@@ -1,0 +1,35 @@
+/* Narrow screens (under 1024px, where Costco hides the category row): the blue row holds warehouse · ZIP at the
+   left and Lists / Buy Again at the right, then logo with icon-only links and cart, then Shop beside the search box. */
+@media (width < 1024px) {
+  :root.cm-on.cm-p-header header:has([data-testid=SearchBarUI]) > div {
+    --cm-edge:16px;
+    & > div:has([data-testid=WarehouseSelectorUI]) {
+      grid-column:1 / -1; padding:0 var(--cm-edge) !important;
+      & > div:has(nav), & > div > div:has(nav) { width:100% !important; max-width:none !important; margin:0 !important; }
+    }
+
+    & > div:has([data-testid=SearchBarUI]) {
+      & div:has(> [data-testid=Link_homepagelink_IconLinks]) { padding:8px var(--cm-edge) !important; height:auto !important; }
+      & > div > div:has([data-testid=SearchBarUI]) { padding:0 var(--cm-edge) 8px !important; gap:12px !important; }
+      & [data-testid=Button_shop-menu-button] { height:36px !important; min-height:0 !important; padding:0 12px !important; }
+      & [data-testid=Text_shop-menu-button] { font-size:14px !important; line-height:20px !important; }
+      & nav[data-testid=LinkList] {
+        & > ul { margin-right:40px !important; }
+        & li + li::before { content:none; }
+        /* icon-only links; the label stays for screen readers */
+        & :is(li > button, li > div > a):not([data-testid=cart-link]) { width:40px; height:36px !important; padding:0 !important; justify-content:center; flex-direction:row !important;
+          & svg { width:22px !important; height:22px !important; }
+          & [data-testid^=Text] { position:absolute !important; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+        }
+        & li > div { height:36px !important; }
+        & [data-testid=cart-link] { flex-direction:row !important; padding:0 10px !important; & [data-testid=Text] { display:none !important; } }
+      }
+    }
+  }
+  /* pages with breadcrumbs too: search.css moves the warehouse to the breadcrumb row on wide screens only */
+  :root.cm-on.cm-p-header:has(nav[data-testid=Breadcrumbs]) header:has([data-testid=SearchBarUI]) > div nav:has(> div > [data-testid=WarehouseSelectorUI]) {
+    position:static !important; height:36px !important;
+    &, & * { color:#fff !important; fill:#fff !important; }
+    & [data-testid=locationselector_DeliveryLocationSelector]::before { background:rgb(255 255 255 / .4) !important; }
+  }
+}

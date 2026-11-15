@@ -72,7 +72,11 @@
       }
     }
     & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }
-    & > div > nav > ul > li { height:36px !important; min-height:0 !important; }
+    & > div > nav > ul > li { height:36px !important; min-height:0 !important; padding:0 !important; margin:0 !important; width:auto !important; }
+    /* labels 28px apart, no padding, like the cart */
+    & > div > nav > ul { gap:0 28px !important; }
+    & > div > nav > ul > li > :is(a, button), & > div > nav > ul > li > div > :is(a, button) { padding:0 !important; min-width:0 !important; }
+    & > div > nav > ul > li > div { width:auto !important; min-width:0 !important; }
     & > div > nav > ul > li > a { display:inline-flex !important; align-items:center; & * { font-size:14px !important; line-height:20px !important; height:auto !important; padding-block:0 !important; } }
     & [data-testid=Text_shop-menu-button] { font-size:14px !important; line-height:20px !important; }
     & > div > nav > ul > li > :is(a, button, div) > :is(a, button), & > div > nav > ul > li > :is(a, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
@@ -80,7 +84,7 @@
 
   /* warehouse · hours | ZIP | Lists | Buy Again, in white at the right end of the blue row */
   & > div:has([data-testid=WarehouseSelectorUI]) {
-    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 var(--cm-edge) 0 24px !important; background:var(--cm-blue) !important;
+    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 var(--cm-edge) 0 16px !important; background:var(--cm-blue) !important;
     & > div { background:none !important; height:36px !important; min-height:0 !important; padding:0 !important; }
     /* every wrapper becomes one centered row */
     & :is(div, nav):has(> :is(div, nav, a, button)) {

@@ -44,6 +44,11 @@
       display:inline-flex !important; align-items:center; gap:4px; }
     & #navigation-dropdown { padding-left:0 !important; }
     & .nav-item[data-cm-overflow] { display:none !important; }
+    /* Shop: Phosphor list icon; wide screens swap in the sidebar icon below */
+    & #navigation-dropdown { gap:6px !important;
+      & > i { display:none !important; }
+      &::before { content:"\e2f0"; font-family:Phosphor; font-size:20px; font-weight:400; line-height:1; }
+    }
     & :is(.nav-item > a, #navigation-dropdown) { font-size:14px !important; line-height:20px !important; padding:0 !important; }
   }
 
@@ -53,7 +58,7 @@
     /* keep the first category clear of Shop when the 1440px container sits close to the left edge */
     & #navigation-widget { container-type:inline-size; }
     & #navigation-widget .fixed-container { padding-left:max(24px, calc(108px - max(0px, (100cqw - 1440px) / 2))) !important; }
-    & #navigation-dropdown { position:absolute !important; left:12px; top:0; gap:6px !important;
+    & #navigation-widget #navigation-dropdown { position:absolute !important; left:12px; top:0; gap:6px !important;
       & > i { display:none !important; }
       &::before { content:"\ec24"; font-family:Phosphor; font-size:20px; font-weight:400; line-height:1; }
     }

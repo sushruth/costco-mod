@@ -20,9 +20,24 @@ function fitNav() {
 let t = 0;
 const refit = () => { clearTimeout(t); t = window.setTimeout(fitNav, 50); };
 
+// Categories in the newer header's order. The old header has no Savings link, so ours points at the same page.
+const savings = el('div', { class: 'nav-item' }, el('a', { href: '/s?keyword=OFF&dept=All', class: 'nav-flyout' }, 'Savings'));
+function order(on: boolean) {
+  const items = $$('#navigation-widget nav.menu > .nav-item:not(#navigation-dropdown)');
+  const by = (t: string) => items.find((n) => text(n).startsWith(t));
+  const deals = by('Black Friday'), grocery = by('Grocery'), sameDay = by('Same-Day');
+  if (on) {
+    if (deals && grocery) grocery.before(deals);
+    if (sameDay) sameDay.after(savings);
+  } else {
+    savings.remove();
+    if (deals && sameDay) sameDay.after(deals);
+  }
+}
+
 function place(on: boolean) {
   const hdr = $('#header-widget'), nav = $('#navigation-widget'), menu = $('#navigation-widget nav.menu');
-  const loc = $('#deliveryLocation'), lists = $('#banner-list-actions'), acct = $('#header-widget .account-cart ul.t5-header-font');
+  const loc = $('#deliveryLocation'), lists = $('#banner-list-actions');
   if (!hdr || !nav || !menu) return;
   if (on) {
     hdr.before(nav);
@@ -32,6 +47,7 @@ function place(on: boolean) {
     // Costco's cart glyph turns blank on hover; a Phosphor cart stands in.
     const cart = $('#cart-d');
     if (cart && !$(':scope > .cm-ic', cart)) cart.prepend(ic('shopping-cart-simple'));
+    order(true);
     fitNav();
   } else {
     hdr.after(nav);
@@ -39,6 +55,7 @@ function place(on: boolean) {
     if (lists) $('#order-nav')?.append(lists);
     navEnd.remove();
     $('#cart-d > .cm-ic')?.remove();
+    order(false);
   }
 }
 

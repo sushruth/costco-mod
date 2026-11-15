@@ -1,0 +1,37 @@
+html.cm-on {
+  --cm-blue:#005DAB; --cm-blue-dark:#004B87; --cm-blue-tint:#EFF7FB;
+  --cm-red:#E31837; --cm-green:#008000; --cm-amber:#8A6D3B; --cm-amber-tint:#FFF8E1;
+  --cm-ink:#333; --cm-ink-2:#4D4D4D; --cm-ink-3:#5F5F5F;
+  --cm-line:#E5E5E5; --cm-line-strong:#CCC; --cm-group:var(--cm-blue); --cm-surface-2:#F4F5F6; --cm-page:#F5F5F5;
+  --cm-card:0 0 5px rgba(0,0,0,.3);
+}
+html.cm-on #cart-body { background:var(--cm-page); padding-bottom:16px; }
+/* Costco stacks 20-30px bottom margins under the item list and summary; the page padding is enough */
+html.cm-on :is(#order-items, #order-summary-column, #order-summary-body) { margin-bottom:0 !important; }
+html.cm-on #cart > .row > [class*="col-"]:empty { display:none; }
+html.cm-on #cart { padding-top:16px !important; }
+/* the item count lives in the Order review header, so the page title row only stays for screen readers */
+html.cm-on #cart-title { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; margin:0 !important; }
+html.cm-on #cart-region:not(:has(.alert-notification:not(.hidden))) { display:none; }
+html.cm-on .cm-hide, html.cm-on #cart-body .cm-hide { display:none !important; }
+html:not(.cm-on) #cart-body [data-cm] { display:none !important; }
+.cm-ic { font-size:18px; line-height:1; vertical-align:-3px; }
+
+/* shared pieces */
+/* savings: a quiet label, the amount in green */
+.cm-save { color:var(--cm-ink-3); font-weight:400; white-space:nowrap; & b { color:var(--cm-green); font-weight:600; } }
+.cm-when { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--cm-ink-3); white-space:nowrap; }
+.cm-when.cm-warn { color:var(--cm-amber); }
+/* Costco's slanted badge, kept for the one thing that needs shouting */
+.cm-badge { display:inline-block; background:var(--cm-red); color:#fff; font-size:12px; line-height:16px; font-weight:600;
+  padding:2px 16px 2px 6px; border-radius:3px 3px 0 0; clip-path:polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); white-space:nowrap; }
+.cm-btn { font:inherit; font-size:13px; font-weight:600; height:30px; padding:0 10px; border-radius:4px; border:1px solid var(--cm-blue); background:#fff; color:var(--cm-blue);
+  cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.cm-btn:hover { background:var(--cm-blue-tint); }
+.cm-btn .cm-ic { font-size:16px; vertical-align:0; }
+.cm-icon-btn { width:30px; padding:0; justify-content:center; border-color:var(--cm-line-strong); color:var(--cm-ink-2); }
+.cm-link { font:inherit; font-size:12px; background:none; border:0; padding:0; color:var(--cm-ink-3); cursor:pointer; text-decoration:underline; margin-left:auto; }
+.cm-btn:focus-visible, .cm-link:focus-visible { outline:2px solid var(--cm-blue); outline-offset:2px; }
+#cm-restore { position:fixed; right:16px; bottom:16px; z-index:9999; font:600 13px/1 system-ui, sans-serif; padding:10px 14px; border-radius:4px;
+  border:0; background:#005DAB; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.2); cursor:pointer; }
+html.cm-on #cm-restore { display:none; }

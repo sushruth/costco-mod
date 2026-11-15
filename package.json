@@ -1,0 +1,18 @@
+{
+  "name": "costco-mod",
+  "version": "0.4.0",
+  "description": "Restyles the costco.com cart in place: compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "bun dev/build.ts",
+    "dev": "bun dev/build.ts --watch",
+    "check": "tsc --noEmit",
+    "preview": "bun dev/preview.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}

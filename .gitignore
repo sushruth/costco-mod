@@ -4,3 +4,5 @@ cart_files/
 cart.preview.html
 cart.before.html
 .DS_Store
+node_modules/
+dev/costco-cart.dev.user.js

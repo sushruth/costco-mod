@@ -43,7 +43,7 @@
     grid-row:1; grid-column:1; background:var(--cm-blue) !important; height:36px;
     & > div { background:none !important; }
     & > div, & > div > nav { height:36px !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; }
-    & > div { padding-inline:0 !important; }
+    & > div { padding-inline:0 !important; max-width:none !important; width:100% !important; }
     position:relative;
     & > div > nav { width:100%; box-sizing:border-box; padding-left:var(--cm-edge) !important; }
     /* no caret toggle beside each category */

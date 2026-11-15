@@ -14,7 +14,19 @@
     & > div > div:has([data-testid=SearchBarUI]) { padding:8px 24px !important; margin:0 !important; height:auto !important; min-height:0 !important; }
     & :has(> [data-testid=Link_homepagelink_SearchStrip]), & [data-testid=Link_homepagelink_SearchStrip] { width:auto !important; flex:none !important; }
     & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:calc(32px * 1400 / 412) !important; min-width:0 !important; max-width:none !important; }
-    & nav[data-testid=LinkList] :is(a, button) { font-size:14px !important; }
+    /* account links like the cart: 14px blue, short grey dividers, Cart as an outlined button */
+    & nav[data-testid=LinkList] {
+      & > ul { margin:0 !important; align-items:center; }
+      & li { position:relative; height:36px !important; padding:0 12px !important; border:0 !important; display:flex !important; align-items:center; }
+      & li + li::before { content:""; position:absolute; left:0; top:11px; width:1px; height:14px; background:var(--cm-line-strong); }
+      & li:has([data-testid=cart-link])::before { content:none; }
+      & :is(a, button, div) { font-size:14px !important; line-height:20px !important; }
+      & [data-testid=cart-link] {
+        height:36px !important; margin-left:8px; padding:0 14px !important; display:inline-flex !important; align-items:center; gap:4px;
+        border:1px solid var(--cm-blue); border-radius:4px; font-weight:600;
+        & [data-testid=Text] { padding-left:4px !important; font-weight:600; }
+      }
+    }
   }
 
   /* blue category row: one 36px line; categories that don't fit wrap out of sight and stay in the Shop menu.
@@ -59,13 +71,15 @@
       display:flex !important; flex-direction:row !important; align-items:center !important; gap:6px; width:max-content !important;
       height:36px; min-height:0 !important; margin:0 !important; padding:0 !important; }
     & > div > div { gap:16px; }
-    & [data-testid=locationselector_DeliveryLocationSelector] { padding-left:12px !important; border-left:1px solid rgb(255 255 255 / .4); }
     & [data-testid$=-label], & nav > div:has([data-testid=Text_surcharge-and-threshold]) { display:none !important; }
     & * { color:#fff !important; fill:#fff !important; font-size:13px !important; line-height:18px !important; white-space:nowrap; }
     & svg { width:14px !important; height:14px !important; }
     & button { padding:0 !important; min-width:0 !important; font-weight:600 !important; }
     & [data-testid^=Text_warehouse-openinghours] { opacity:.85; &::before { content:"·"; margin-right:6px; } }
     & [data-testid=Divider] { background:rgb(255 255 255 / .4) !important; height:14px !important; }
-    & nav > div:has([data-testid=Link_wishlist]) { padding-left:12px !important; border-left:1px solid rgb(255 255 255 / .4); gap:8px; }
+    /* short white dividers before ZIP and Lists, like the cart */
+    & :is([data-testid=locationselector_DeliveryLocationSelector], nav > div:has([data-testid=Link_wishlist]))::before {
+      content:""; width:1px; height:14px; margin:0 6px 0 10px; background:rgb(255 255 255 / .4); }
+    & nav > div:has([data-testid=Link_wishlist]) { gap:8px; }
   }
 }

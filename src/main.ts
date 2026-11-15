@@ -29,11 +29,13 @@ const wanted = (p: Plugin) => p.locked || (saved[p.id] ?? !p.dev);
 const active = listed.filter(wanted);
 const isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
 const isCart = !!$('#order-items') && !!$('#order-summary-column');
+// Off the cart, only the site header runs.
+const here = isCart ? active : active.filter((p) => p === header);
 
 function setOn(on: boolean) {
   document.documentElement.classList.toggle('cm-on', on);
   flag.set('cm-off', !on);
-  for (const p of active) p.toggle?.(on);
+  for (const p of here) p.toggle?.(on);
 }
 
 let observer: MutationObserver | undefined;
@@ -61,17 +63,18 @@ const base: Omit<Ctx, 'items'> = {
   },
 };
 
-if (isProduct) {
-  for (const p of active) p.product?.();
-} else if (isCart) {
+if (isProduct) for (const p of active) p.product?.();
+if (here.length) {
   loadIcons();
   addStyle('cm-style', __CM_CSS__);
-  document.documentElement.classList.add(...active.map((p) => `cm-p-${p.id}`));
-  const restore = el('button', { type: 'button', id: 'cm-restore' }, 'Cleaned-up view');
-  restore.addEventListener('click', () => setOn(true));
-  document.body.append(restore);
+  document.documentElement.classList.add(...here.map((p) => `cm-p-${p.id}`));
+  if (isCart) {
+    const restore = el('button', { type: 'button', id: 'cm-restore' }, 'Cleaned-up view');
+    restore.addEventListener('click', () => setOn(true));
+    document.body.append(restore);
+  }
   const ctx: Ctx = { ...base, items: [] };
-  for (const p of active) p.setup?.(ctx);
+  for (const p of here) p.setup?.(ctx);
   setOn(!flag.get('cm-off'));
-  render();
+  if (isCart) render();
 }

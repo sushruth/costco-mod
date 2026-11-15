@@ -1,0 +1,48 @@
+/* The newer React header (home, search, product pages). React owns these nodes, so the layout changes with CSS only:
+   blue category row on top with warehouse and ZIP at its right end, then one row of logo, search and account links. */
+:root.cm-on.cm-p-header header:has([data-testid=SearchBarUI]) > div {
+  display:grid !important; grid-template-columns:minmax(0, 1fr) auto;
+  & > div:has([data-testid=AnnouncementBanner]) { display:none !important; }
+
+  /* logo, search, account links */
+  & > div:has([data-testid=SearchBarUI]) {
+    grid-row:2; grid-column:1 / -1;
+    & > div { padding:0 !important; }
+    & > div > div:first-child:has(nav[data-testid=LinkList]) { display:none !important; }
+    & > div > div:has([data-testid=SearchBarUI]) { padding:8px 24px !important; margin:0 !important; height:auto !important; min-height:0 !important; }
+    & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:auto !important; }
+    & [data-testid=SearchBarUI] :is(input, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
+    & nav[data-testid=LinkList] :is(a, button) { font-size:14px !important; }
+  }
+
+  /* blue category row: one 36px line; categories that don't fit wrap out of sight and stay in the Shop menu.
+     Only the row's own nav: the Shop and category menus are navs inside it. */
+  & > div:has(> div > nav[data-testid=LinkList]) {
+    grid-row:1; grid-column:1; background:var(--cm-blue) !important; height:36px;
+    & > div { background:none !important; }
+    & > div, & > div > nav { height:36px !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; }
+    & > div > nav { width:100%; }
+    & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }
+    & > div > nav > ul > li { height:36px !important; min-height:0 !important; }
+    & > div > nav > ul > li > :is(a, button, div) > :is(a, button), & > div > nav > ul > li > :is(a, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
+  }
+
+  /* warehouse · hours | ZIP | Lists | Buy Again, in white at the right end of the blue row */
+  & > div:has([data-testid=WarehouseSelectorUI]) {
+    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 24px 0 0 !important; background:var(--cm-blue) !important;
+    & > div { background:none !important; height:36px !important; min-height:0 !important; padding:0 !important; }
+    /* every wrapper becomes one centered row */
+    & :is(div, nav):has(> :is(div, nav, a, button)) {
+      display:flex !important; flex-direction:row !important; align-items:center !important; gap:6px; width:max-content !important;
+      height:36px; min-height:0 !important; margin:0 !important; padding:0 !important; }
+    & > div > div { gap:16px; }
+    & [data-testid=locationselector_DeliveryLocationSelector] { padding-left:12px !important; border-left:1px solid rgb(255 255 255 / .4); }
+    & [data-testid$=-label], & nav > div:has([data-testid=Text_surcharge-and-threshold]) { display:none !important; }
+    & * { color:#fff !important; fill:#fff !important; font-size:13px !important; line-height:18px !important; white-space:nowrap; }
+    & svg { width:14px !important; height:14px !important; }
+    & button { padding:0 !important; min-width:0 !important; font-weight:600 !important; }
+    & [data-testid^=Text_warehouse-openinghours] { opacity:.85; &::before { content:"·"; margin-right:6px; } }
+    & [data-testid=Divider] { background:rgb(255 255 255 / .4) !important; height:14px !important; }
+    & nav > div:has([data-testid=Link_wishlist]) { padding-left:12px !important; border-left:1px solid rgb(255 255 255 / .4); gap:8px; }
+  }
+}

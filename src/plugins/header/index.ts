@@ -2,6 +2,7 @@ import { $, $$, el, ic } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
 import './header.css';
 import './flyouts.css';
+import './mui.css';
 import s from './header.module.css';
 
 // Site header: the blue category row moves above the logo row, warehouse and ZIP ride on its right end,

@@ -1,6 +1,6 @@
 # Costco Cart, Cleaned Up
 
-This userscript makes the costco.com cart shorter and easier to scan.
+This userscript makes costco.com denser and easier to scan. Every page gets a two-row header, and the cart gets shorter.
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 

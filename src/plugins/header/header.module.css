@@ -13,6 +13,7 @@
     & > div:last-child:not(:global(.MuiTypography-root)) {
       margin:0 !important; opacity:.85;
       & * { display:inline !important; padding:0 !important; }
+      & * + *::before { content:"·"; margin:0 4px; }
       &::before { content:"·"; margin:0 4px; }
     }
   }

@@ -1,4 +1,4 @@
-import { $, $$, el, ic } from '../../core/dom';
+import { $, $$, el, ic, text } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
 import './header.css';
 import './flyouts.css';
@@ -58,6 +58,17 @@ function holdShopMenu() {
   }
 }
 
+// Store hours: hovering the warehouse shows Costco's hours lines in one popup, each shortened from
+// "Executive Member hours start at 9AM" to "Executive Member · 9AM". Read on hover, so re-renders don't matter.
+function hoursPopup() {
+  addEventListener('pointerover', (e) => {
+    const box = (e.target as Element).closest?.('[data-testid=WarehouseSelectorUI], #deliveryLocation [class*="MuiBox-root"]:has(> .MuiTypography-t7)');
+    if (!(box instanceof HTMLElement)) return;
+    const lines = $$('*', box).filter((n) => !n.children.length && /hours start/i.test(n.textContent ?? ''));
+    if (lines.length) box.dataset.cmHours = lines.map((n) => text(n).replace(/\s*hours start at\s*/i, ' · ')).join('\n');
+  }, true);
+}
+
 export const header: Plugin = {
   id: 'header',
   name: 'Compact site header',
@@ -65,6 +76,7 @@ export const header: Plugin = {
     new ResizeObserver(refit).observe(navEnd);
     addEventListener('resize', refit);
     holdShopMenu();
+    hoursPopup();
   },
   toggle: place,
 };

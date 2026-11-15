@@ -10,7 +10,7 @@
     & > div { padding:0 !important; }
     & > div > div:first-child:has(nav[data-testid=LinkList]) { display:none !important; }
     & > div > div:has([data-testid=SearchBarUI]) { padding:8px 24px !important; margin:0 !important; height:auto !important; min-height:0 !important; }
-    & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:auto !important; }
+    & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:auto !important; object-fit:contain; object-position:left center; }
     & [data-testid=SearchBarUI] :is(input, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
     & nav[data-testid=LinkList] :is(a, button) { font-size:14px !important; }
   }

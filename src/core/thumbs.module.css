@@ -1,0 +1,9 @@
+/* Inline item thumbnails that stand in for product names in the panel and the discount breakdown. */
+.row { display:inline-flex; flex-wrap:wrap; gap:3px; vertical-align:middle; }
+.thumb {
+  display:inline-grid; place-items:center; width:22px; height:22px; padding:1px; border:1px solid var(--cm-line); border-radius:3px;
+  background:#fff; cursor:pointer; font-size:11px; color:var(--cm-ink-3);
+  & img { width:100%; height:100%; object-fit:contain; }
+  &:hover { border-color:var(--cm-blue); }
+  &:focus-visible { outline:2px solid var(--cm-blue); outline-offset:1px; }
+}

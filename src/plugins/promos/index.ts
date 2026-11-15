@@ -1,5 +1,6 @@
 import { $, el, ic } from '../../core/dom';
-import { fmt, fmt0, money, shortName } from '../../core/format';
+import { fmt, fmt0, money } from '../../core/format';
+import { thumbs } from '../../core/thumbs';
 import type { Item } from '../../core/items';
 import type { Ctx, Plugin } from '../../core/plugin';
 import { promoCache } from './cache';
@@ -59,7 +60,7 @@ function render(ctx: Ctx) {
   fetchBtn.addEventListener('click', () => fetchPromos(missing));
   anchor.after(el('div', { class: s.box },
     ...lines.map((l) => el('div', { class: s.line },
-      el('span', {}, l.name, el('span', { class: s.items }, ' · ' + l.items.map((i) => shortName(i.name)).join(', '))),
+      el('span', { class: s.name }, l.name, thumbs(l.items)),
       el('span', {}, '-' + fmt0(l.amount)))),
     missing.length
       ? el('div', { class: s.note }, ic('info'),

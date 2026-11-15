@@ -1,5 +1,4 @@
 import { $, el, ic } from '../../core/dom';
-import { shortName } from '../../core/format';
 import type { Item } from '../../core/items';
 import type { Plugin } from '../../core/plugin';
 import './pairing.css';
@@ -18,7 +17,7 @@ function link(items: Item[]) {
     it.card.classList.toggle('cm-child', !!it.parent);
     it.card.classList.toggle('cm-parent', out[i + 1]?.parent === it);
     if (it.parent) $('.item-thumbnail + .col-xs-9', it.card)?.prepend(
-      el('div', { class: 'cm-child-tag cm-extra' }, ic('link-simple'), `Added with ${shortName(it.parent.name)}`));
+      el('div', { class: 'cm-child-tag cm-extra' }, ic('link-simple'), 'Added with the item above'));
   });
   return out;
 }

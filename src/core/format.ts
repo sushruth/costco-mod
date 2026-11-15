@@ -11,10 +11,6 @@ export function toDate(s: string) {
   return new Date(y < 100 ? 2000 + y : y, m - 1, d, 23, 59, 59);
 }
 
-// ponytail: keyword list for common big-ticket items; falls back to the first three words.
-const KINDS = ['microwave', 'refrigerator', 'freezer', 'dishwasher', 'washer', 'dryer', 'cooktop', 'range', 'oven', 'TV'];
-export const shortName = (n: string) => KINDS.find((w) => new RegExp(`\\b${w}\\b`, 'i').test(n)) || n.split(/\s+/).slice(0, 3).join(' ');
-
 export type Urgency = { cls: 'cm-urgent' | 'cm-warn'; label: string } | null;
 export function urgency(days: number | null): Urgency {
   if (days == null || days > 7) return null;

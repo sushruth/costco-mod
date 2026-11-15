@@ -1,9 +1,8 @@
 /* Discount breakdown under Costco's "Discount on Order" line. */
 .box { clear:both; margin:2px 0 8px; padding-left:12px; border-left:2px solid var(--cm-line); font-size:12px; line-height:18px; color:var(--cm-ink-3); }
 .line { display:flex; justify-content:space-between; gap:8px;
-  & > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--cm-ink); }
-  & > span:last-child { color:var(--cm-green); white-space:nowrap; } }
-.items { color:var(--cm-ink-3); }
+  & > span:last-child { align-self:center; color:var(--cm-green); white-space:nowrap; } }
+.name { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; min-width:0; color:var(--cm-ink); }
 .note { display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-top:2px; }
 .gap { color:var(--cm-amber); font-weight:600; }
 .fetch { font-size:12px; margin-left:0; color:var(--cm-blue); }

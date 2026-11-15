@@ -21,6 +21,7 @@ async function build() {
 await build();
 if (dev) {
   let t: Timer;
-  watch(`${root}src`, { recursive: true }, () => { clearTimeout(t); t = setTimeout(build, 50); });
+  // A broken intermediate edit logs its error and waits for the next save.
+  watch(`${root}src`, { recursive: true }, () => { clearTimeout(t); t = setTimeout(() => build().catch((e) => console.error(String(e))), 50); });
   console.log('watching src/ — install from http://127.0.0.1:8723/dev/costco-cart.dev.user.js');
 }

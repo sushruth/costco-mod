@@ -1,6 +1,7 @@
 import { $, copy, el, ic } from '../../core/dom';
 import { fmt, fmt0, shortDate, urgency } from '../../core/format';
 import type { Item } from '../../core/items';
+import { jumpTo } from '../../core/thumbs';
 import type { Ctx, Plugin } from '../../core/plugin';
 import { renderBar } from './bar';
 import { dateGroups, deliveryStrip } from './strip';
@@ -24,9 +25,7 @@ function row(i: Item, offDay: boolean) {
   // Clicking a row scrolls to its card and flashes it.
   const jump = (e: Event) => {
     if ((e.target as Element).closest('a') || (e instanceof KeyboardEvent && e.key !== 'Enter')) return;
-    i.card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    i.card.classList.add('cm-flash');
-    setTimeout(() => i.card.classList.remove('cm-flash'), 1200);
+    jumpTo(i.card);
   };
   li.addEventListener('click', jump);
   li.addEventListener('keydown', jump);

@@ -8,7 +8,7 @@
   & :global(.cm-ic) { font-size:14px; vertical-align:0; margin-top:1px; } }
 .warn { background:var(--cm-amber-tint); color:var(--cm-amber); }
 .ok { background:var(--cm-blue-tint); color:var(--cm-blue-dark); }
-.stripRow { font-weight:400; & b { font-weight:600; } }
+.stripRow { display:flex; align-items:center; gap:8px; margin-top:4px; font-weight:400; & b { font-weight:600; min-width:84px; } }
 
 .rows { list-style:none; margin:0; padding:0; }
 .row {

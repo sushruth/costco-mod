@@ -1,0 +1,20 @@
+/* Costco's summary column: our review card on top, Costco's totals and Checkout under it as one card. */
+:root.cm-on.cm-p-panel {
+  & #order-summary-column { transform:none !important; }
+  & #order-summary-column .e-spot-cart-body { display:none; }
+  @media (width > 1024px) { & [role="region"][aria-label="Checkout"] { position:sticky; top:16px; } }
+  @media (width <= 1024px) { & #cart-body { padding-bottom:96px; } }
+
+  & #order-summary-body {
+    border:1px solid var(--cm-line) !important; border-top:0 !important; border-radius:0 0 4px 4px; background:#fff !important; box-shadow:none !important;
+    margin-top:0 !important; padding:4px 20px 16px !important;
+    & :is(.summary-left, .summary-right, .order-estimated, .order-estimated *) { font-size:14px !important; line-height:20px !important; margin-bottom:6px !important; }
+    & .estimated-total-label { font-size:18px !important; line-height:24px !important; font-weight:700 !important; }
+    & .order-summary-text-info { font-size:12px; color:var(--cm-ink-3); margin:2px 0 12px; }
+    & .divider-line { margin:8px 0 10px; border-color:var(--cm-line); }
+  }
+  & #order-estimated-total { font-size:18px !important; line-height:24px !important; font-weight:700 !important; }
+  & #order-estimated-zip { width:75%; }
+  & #order-estimated-shipping { width:25%; text-align:right; }
+  & #shopCartCheckoutSubmitButton { width:100%; height:44px; border-radius:4px; font-weight:600; }
+}

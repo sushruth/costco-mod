@@ -1,0 +1,45 @@
+/* Order review card: header, delivery strip, one row per item, actions, then Costco's totals below it. */
+/* one card with Costco's totals below it: the same light border as the item cards, no shadow */
+.review { background:#fff; border:1px solid var(--cm-line); border-bottom:0; border-radius:4px 4px 0 0; color:var(--cm-ink); font-size:13px; line-height:18px; }
+.head { padding:14px 20px 10px; font-size:13px; line-height:18px; font-weight:600;
+  & span { font-weight:400; color:var(--cm-ink-3); } }
+
+.strip { margin:0 20px 6px; padding:6px 10px; border-radius:4px; font-size:12px; line-height:16px; display:flex; gap:6px; align-items:flex-start;
+  & :global(.cm-ic) { font-size:14px; vertical-align:0; margin-top:1px; } }
+.warn { background:var(--cm-amber-tint); color:var(--cm-amber); }
+.ok { background:var(--cm-blue-tint); color:var(--cm-blue-dark); }
+.stripRow { font-weight:400; & b { font-weight:600; } }
+
+.rows { list-style:none; margin:0; padding:0; }
+.row {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:8px 20px; cursor:pointer; border-top:1px solid var(--cm-line);
+  &:first-child { border-top:0; }
+  &:hover { background:var(--cm-surface-2); }
+  &:focus-visible { outline:2px solid var(--cm-blue); outline-offset:-2px; }
+}
+.name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  & a { color:var(--cm-ink); text-decoration:none; &:hover { color:var(--cm-blue); text-decoration:underline; } } }
+.price { font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+.meta { font-size:12px; line-height:16px; color:var(--cm-ink-3); display:flex; gap:10px; flex-wrap:wrap;
+  & > span { display:inline-flex; align-items:center; gap:3px; }
+  & :global(.cm-ic) { font-size:13px; vertical-align:0; }
+  & :global(.cm-urgent) { color:var(--cm-red); font-weight:700; }
+  & :global(.cm-warn) { color:var(--cm-amber); } }
+.rowSave { font-size:12px; text-align:right; & b { font-weight:400; } }
+
+.foot { display:flex; padding:10px 20px; gap:8px; align-items:center; white-space:nowrap; border-top:1px solid var(--cm-line); }
+.pre { display:none; margin:0 20px 12px; padding:10px; background:var(--cm-surface-2); border-radius:4px; font-size:11px; line-height:15px;
+  white-space:pre-wrap; max-height:220px; overflow:auto; &.open { display:block; } }
+.savings { display:flex; justify-content:space-between; padding:10px 20px 0; border-top:1px solid var(--cm-line); color:var(--cm-ink); font-size:14px; line-height:20px;
+  & span:last-child { color:var(--cm-green); } }
+
+/* checkout bar, phones and tablets only */
+.bar { display:none; }
+@media (width <= 1024px) {
+  :global(:root.cm-on.cm-p-panel) .bar { display:flex; position:fixed; inset:auto 0 0; z-index:1000; background:#fff; border-top:1px solid var(--cm-line);
+    box-shadow:0 -2px 8px rgba(0,0,0,.08); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); align-items:center; justify-content:space-between; gap:12px; }
+}
+.barLabel { font-size:12px; color:var(--cm-ink-3); }
+.barTotal { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+.barAlert { font-size:12px; color:var(--cm-red); font-weight:600; background:none; border:0; padding:0; }
+.barGo { height:44px; padding:0 24px; border-radius:4px; border:0; background:var(--cm-green); color:#fff; font-weight:600; font-size:16px; }

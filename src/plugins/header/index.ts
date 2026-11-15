@@ -46,8 +46,10 @@ function place(on: boolean) {
 // stop here, before the page's script sees them, so the sidebar stays until Shop is clicked again.
 // Moves inside the menu and every click still reach the page.
 function holdShopMenu() {
+  const wide = matchMedia('(width > 1024px)'); // the sidebar layout in mui.css
   for (const type of ['mouseover', 'mouseout', 'pointerover', 'pointerout']) {
     addEventListener(type, (e) => {
+      if (!wide.matches) return;
       const menu = $('header [data-testid=ShopMenu]:has(> button[aria-expanded=true])');
       if (!menu) return;
       const to = (e as MouseEvent).relatedTarget as Node | null;

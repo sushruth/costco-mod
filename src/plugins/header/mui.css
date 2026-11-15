@@ -24,18 +24,26 @@
     & > div { background:none !important; }
     & > div, & > div > nav { height:36px !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; }
     position:relative;
-    & > div > nav { width:100%; box-sizing:border-box; padding-left:max(var(--cm-edge), 108px) !important; }
-    /* Shop sits at the far left; its menu opens as a left sidebar below the blue row */
-    & > div > nav > ul > li:has([data-testid=ShopMenu]) { position:absolute !important; left:12px; top:0; }
-    & [data-testid=ShopMenu] > button { z-index:1301 !important; }
+    & > div > nav { width:100%; box-sizing:border-box; padding-left:var(--cm-edge) !important; }
     /* no caret toggle beside each category */
     & > div > nav > ul > li > button + button { display:none !important; }
-    & [data-testid=ShopMenu]:has(> button[aria-expanded=true]) > div:not([data-testid]) {
-      position:fixed !important; inset:36px auto 0 0 !important; margin:0 !important; height:calc(100vh - 36px) !important; width:max-content !important; z-index:1300 !important;
-      & > [data-testid=PopoverMenu] { height:100% !important; width:max-content !important; margin:0 !important; flex:none !important; }
-      & > [data-testid=PopoverMenu] > div:first-child { width:300px !important; }
-      & > [data-testid=shop-menu-backdrop] { background:none !important; pointer-events:none !important; }
-      & > [data-testid=PopoverMenu] > div { height:100% !important; width:260px !important; flex:none !important; overflow-y:auto; border-radius:0 !important; box-sizing:border-box; padding-top:8px !important; box-shadow:1px 0 0 var(--cm-line), 4px 0 12px rgb(0 0 0 / .12) !important }
+    /* wide screens: Shop sits at the far left; its menu opens as a left sidebar below the blue row. Submenu
+       columns show only while the pointer is on the menu; the category list stays. */
+    @media (width > 1024px) {
+      & > div > nav { padding-left:max(var(--cm-edge), 108px) !important; }
+      & > div > nav > ul > li:has([data-testid=ShopMenu]) { position:absolute !important; left:12px; top:0; }
+      & [data-testid=ShopMenu] > button { z-index:1301 !important; gap:6px;
+        & > svg { display:none !important; }
+        &::before { content:"\ec24"; font-family:Phosphor; font-size:20px; line-height:1; }
+      }
+      & [data-testid=ShopMenu]:has(> button[aria-expanded=true]) > div:not([data-testid]) {
+        position:fixed !important; inset:36px auto 0 0 !important; margin:0 !important; height:calc(100vh - 36px) !important; width:max-content !important; z-index:1300 !important;
+        & > [data-testid=PopoverMenu] { height:100% !important; width:max-content !important; margin:0 !important; flex:none !important; }
+        & > [data-testid=PopoverMenu] > div { height:100% !important; width:260px !important; flex:none !important; overflow-y:auto; border-radius:0 !important; box-sizing:border-box; padding-top:8px !important; box-shadow:1px 0 0 var(--cm-line), 4px 0 12px rgb(0 0 0 / .12) !important }
+        & > [data-testid=PopoverMenu] > div:first-child { width:300px !important; }
+        & > [data-testid=PopoverMenu]:not(:hover) > div:not(:first-child) { display:none !important; }
+        & > [data-testid=shop-menu-backdrop] { background:none !important; pointer-events:none !important; }
+      }
     }
     & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }
     & > div > nav > ul > li { height:36px !important; min-height:0 !important; }

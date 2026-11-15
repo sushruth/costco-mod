@@ -29,8 +29,8 @@ const wanted = (p: Plugin) => p.locked || (saved[p.id] ?? !p.dev);
 const active = listed.filter(wanted);
 const isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
 const isCart = !!$('#order-items') && !!$('#order-summary-column');
-// Off the cart, only the site header runs.
-const here = isCart ? active : active.filter((p) => p === header);
+// Off the cart, only the site header runs, plus Redlines in the dev build.
+const here = isCart ? active : active.filter((p) => p === header || p === redlines);
 
 function setOn(on: boolean) {
   document.documentElement.classList.toggle('cm-on', on);

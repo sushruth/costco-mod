@@ -4,7 +4,7 @@ This userscript makes costco.com denser and easier to scan. Every page gets a tw
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 
-[<img src="docs/hero-2x2.png" alt="The cleaned-up header, a 2 by 2 grid of search results with unit prices, the filter sidebar, the cart and the footer" width="100%">](SCREENSHOTS.md)
+[<img src="docs/hero-coffee.png" alt="The cleaned-up header, a 2 by 2 grid of coffee search results with prices per pound, the filter sidebar, the cart and the footer" width="100%">](SCREENSHOTS.md)
 
 [Before and after, page by page](SCREENSHOTS.md). The screenshots blur the warehouse, ZIP code and the cart's prices and discounts.
 

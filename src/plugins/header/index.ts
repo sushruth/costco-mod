@@ -42,12 +42,27 @@ function place(on: boolean) {
   }
 }
 
+// The newer header closes its Shop menu when the pointer leaves it. Pointer moves across the open menu's edge
+// stop here, before the page's script sees them, so the sidebar stays until Shop is clicked again.
+// Moves inside the menu and every click still reach the page.
+function holdShopMenu() {
+  for (const type of ['mouseover', 'mouseout', 'pointerover', 'pointerout']) {
+    addEventListener(type, (e) => {
+      const menu = $('header [data-testid=ShopMenu]:has(> button[aria-expanded=true])');
+      if (!menu) return;
+      const to = (e as MouseEvent).relatedTarget as Node | null;
+      if (menu.contains(e.target as Node) !== (!!to && menu.contains(to))) e.stopPropagation();
+    }, true);
+  }
+}
+
 export const header: Plugin = {
   id: 'header',
   name: 'Compact site header',
   setup: () => {
     new ResizeObserver(refit).observe(navEnd);
     addEventListener('resize', refit);
+    holdShopMenu();
   },
   toggle: place,
 };

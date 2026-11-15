@@ -4,11 +4,19 @@ This userscript makes costco.com denser and easier to scan. Every page gets a tw
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 
-| Before | After |
-| --- | --- |
-| <img src="docs/before-0.4.1.png" alt="Costco cart before" width="420"> | <img src="docs/after-0.4.1.png" alt="Costco cart after" width="420"> |
+**Before**
 
-The screenshots blur prices, discounts, ZIP code and warehouse.
+| Home | Search | Cart |
+| --- | --- | --- |
+| <img src="docs/home-before.png" alt="Costco home page before" width="280"> | <img src="docs/search-before.png" alt="Costco search results before" width="280"> | <img src="docs/cart-before.png" alt="Costco cart before" width="280"> |
+
+**After**
+
+| Home | Search | Cart |
+| --- | --- | --- |
+| <img src="docs/home-after.png" alt="Costco home page after" width="280"> | <img src="docs/search-after.png" alt="Costco search results after" width="280"> | <img src="docs/cart-after.png" alt="Costco cart after" width="280"> |
+
+Home and search show the top of the page; the cart shows the whole page. The screenshots blur the warehouse, ZIP code and the cart's prices and discounts.
 
 ## Install
 

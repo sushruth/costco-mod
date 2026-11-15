@@ -1,22 +1,18 @@
 # Costco, Cleaned Up
 
-This userscript makes costco.com denser and easier to scan. Every page gets a two-row header, and the cart gets shorter.
+This userscript makes costco.com denser and easier to scan. Every page gets a two-row header, search results fit more products with a price per unit, and the cart gets shorter.
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 
-**After**
+<img src="docs/header.png" alt="The header: category row on top, then logo, search and account links" width="100%">
 
-| Home | Search | Cart |
-| --- | --- | --- |
-| <img src="docs/home-after.png" alt="Costco home page after" width="280"> | <img src="docs/search-after.png" alt="Costco search results after" width="280"> | <img src="docs/cart-after.png" alt="Costco cart after" width="280"> |
+<img src="docs/tiles.png" alt="Search results: compact tiles with badges on the image and a price per 100 sheets" width="100%">
 
-**Before**
+| Filters | Cart |
+| --- | --- |
+| <img src="docs/filters.png" alt="Filter sidebar with a price slider and star rating" width="180"> | <img src="docs/cart.png" alt="Cart with compact item cards and an order review panel" width="620"> |
 
-| Home | Search | Cart |
-| --- | --- | --- |
-| <img src="docs/home-before.png" alt="Costco home page before" width="280"> | <img src="docs/search-before.png" alt="Costco search results before" width="280"> | <img src="docs/cart-before.png" alt="Costco cart before" width="280"> |
-
-Home and search show the top of the page; the cart shows the whole page. The screenshots blur the warehouse, ZIP code and the cart's prices and discounts.
+[Before and after, page by page](SCREENSHOTS.md). The screenshots blur the warehouse, ZIP code and the cart's prices and discounts.
 
 ## Install
 

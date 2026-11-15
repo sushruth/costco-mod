@@ -1,0 +1,66 @@
+/* The newer React footer (home, search, product pages), set like the cart's: one tools strip, five link groups
+   in a row, legal links and copyright centered. React owns these nodes, so the layout changes with CSS only. */
+:root.cm-on.cm-p-footer footer [data-testid=footer] {
+  position:relative; max-width:1440px; margin-inline:auto; padding:16px 24px 12px !important; box-sizing:border-box; gap:0 !important;
+  font-size:12px; line-height:18px;
+  & :is(a, a *) { font-size:12px !important; line-height:18px !important; color:var(--cm-ink-2) !important; }
+  & a:hover, & a:hover * { color:var(--cm-blue) !important; }
+  & :is(h2, h2 *) { font-size:13px !important; line-height:18px !important; font-weight:600 !important; margin:0 !important; color:var(--cm-ink) !important; }
+  & h2 { margin-bottom:4px !important; padding:0 !important; }
+  & hr { display:none !important; }
+
+  /* tools strip: [? Get Help]  Find a Warehouse [____ ⌕]  Get Email Offers [____|Go] ... social and app icons on the right */
+  & > div:has([data-testid=footer--desktop]) { padding:0 0 12px !important; margin:0 !important; border-bottom:1px solid var(--cm-line-strong); }
+  & [data-testid=footer--desktop] {
+    align-items:center; justify-content:space-between; gap:8px 28px; padding-right:390px;
+    flex-wrap:nowrap !important;
+    & > div, & > div:first-child div { flex:none !important; width:auto !important; min-width:0 !important; max-width:none !important; margin:0 !important; padding:0 !important; }
+    & > div:first-child h2 { display:none !important; } /* "Customer Service" repeats the link group below */
+    & form > div, & > div:last-child { display:flex !important; flex-direction:row !important; align-items:center; gap:8px; }
+    & :is(h2, h2 *) { margin:0 !important; font-size:12px !important; font-weight:400 !important; color:var(--cm-ink-3) !important; white-space:nowrap; }
+    & :is(.MuiFormControl-root, .MuiOutlinedInput-root, form > div > div) { width:200px !important; margin:0 !important; }
+    & .MuiOutlinedInput-root { height:32px !important; font-size:13px !important; }
+    & input { height:32px !important; padding:0 10px !important; box-sizing:border-box; font-size:13px !important; }
+    & label { font-size:13px !important; transform:translate(10px, 7px) scale(1) !important; }
+    & label[data-shrink=true] { display:none; }
+    & button { height:32px !important; min-height:0 !important; padding:0 12px !important; font-size:13px !important; }
+    & [data-testid="Link_Get Help"] { display:inline-flex !important; align-items:center; gap:6px; height:32px;
+      &, & * { font-size:13px !important; line-height:20px !important; font-weight:600 !important; color:var(--cm-blue) !important; } }
+  }
+
+  /* five link groups in one row: the column wrappers step aside so every group is a grid item */
+  & > div:has(h2):not(:has(form)):not(:last-child) {
+    padding:12px 0 !important; margin:0 !important; border-bottom:1px solid var(--cm-line-strong);
+    & > div { padding:0 !important; margin:0 !important; }
+    & > div > div > div > div > div { padding:0 !important; margin:0 !important; }
+    & > div > div { padding:0 !important; margin:0 !important; display:grid !important; grid-template-columns:repeat(5, auto); justify-content:space-between; gap:12px 32px; }
+    & > div > div > div, & > div > div > div > div { display:contents !important; }
+    & ul { margin:0 !important; padding:0 !important; }
+    & li { margin:0 !important; padding:0 !important; min-height:0 !important; }
+  }
+
+  /* legal links on one line, the copyright under them, both centered */
+  & > div:last-child {
+    padding:10px 0 0 !important; margin:0 !important; gap:4px; align-items:center;
+    & > div { padding:0 !important; margin:0 !important; }
+    & ul { margin:0 !important; padding:0 !important; justify-content:center; flex-wrap:wrap; gap:4px 16px; }
+    & li { margin:0 !important; padding:0 !important; }
+    & * { font-size:12px !important; line-height:18px !important; }
+    /* social and app icons ride at the right end of the tools strip, as Phosphor icons like the cart's */
+    & ul:has(a[aria-label*=Facebook]) {
+      position:absolute; top:16px; left:auto !important; right:24px; width:auto !important; height:32px; align-items:center; gap:4px; flex-wrap:nowrap;
+      &::before { content:"Follow Us"; margin-right:8px; color:var(--cm-ink-3); }
+      & li:has(a[aria-label*=App]) { margin-left:28px !important; display:flex; align-items:center; gap:8px; &::before { content:"Get the Costco App"; color:var(--cm-ink-3); } }
+      & a { display:grid !important; place-items:center; width:28px; height:28px; border-radius:4px; font-size:0 !important; }
+      & a :is(img, svg) { display:none !important; }
+      & a::before { font-family:Phosphor; font-size:20px; line-height:1; color:var(--cm-ink-2); }
+      & a:hover::before { color:var(--cm-blue); }
+      & a[aria-label*=Facebook]::before { content:"\e226"; }
+      & a[aria-label*=Pinterest]::before { content:"\e64e"; }
+      & a[aria-label*=Instagram]::before { content:"\e2d0"; }
+      & a[aria-label*=TikTok]::before { content:"\eaf2"; }
+      & a[aria-label*=App]::before { content:"\e1e0"; }
+    }
+    & [data-testid=MarkdownRenderer] * { color:var(--cm-ink-3) !important; }
+  }
+}

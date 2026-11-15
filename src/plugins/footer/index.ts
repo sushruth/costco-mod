@@ -1,6 +1,7 @@
 import { $, $$, ic } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
 import './footer.css';
+import './mui.css';
 
 // Costco's images in the tools strip become Phosphor icons, matched by their alt text or role.
 const ICONS: [string, string][] = [['facebook', 'facebook-logo'], ['pinterest', 'pinterest-logo'], ['instagram', 'instagram-logo'], ['app', 'device-mobile']];

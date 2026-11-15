@@ -1,0 +1,23 @@
+/* Search box in both headers (each is a Material UI outlined field): 36px, grey line, a solid blue search button
+   on the right, a blue ring on focus. */
+:root.cm-on.cm-p-header :is(#search-widget, [data-testid=SearchBarUI]) {
+  & .MuiOutlinedInput-root {
+    height:36px !important; min-height:0 !important; padding:0 !important; border-radius:4px !important; background:#fff !important; overflow:hidden;
+    &:focus-within { box-shadow:0 0 0 3px var(--cm-blue-tint); }
+    &:focus-within .MuiOutlinedInput-notchedOutline { border-color:var(--cm-blue) !important; }
+  }
+  & .MuiOutlinedInput-notchedOutline { top:0 !important; border:1px solid var(--cm-line-strong) !important; border-radius:4px !important; & legend { display:none; } }
+  & input {
+    height:36px !important; padding:0 12px !important; border:0 !important; box-shadow:none !important; outline:none !important;
+    font-size:14px !important; color:var(--cm-ink) !important; background:none !important;
+    &::placeholder { color:var(--cm-ink-3) !important; opacity:1; }
+  }
+  & button { height:36px !important; min-width:0 !important; padding:0 10px !important; border-radius:0 !important; flex:none; }
+  & button[aria-label=Clear] svg { width:16px !important; height:16px !important; fill:var(--cm-ink-3) !important; color:var(--cm-ink-3) !important; }
+  & button[aria-label=Search] {
+    width:44px; padding:0 !important; justify-content:center; background:var(--cm-blue) !important;
+    & svg { width:20px !important; height:20px !important; fill:#fff !important; color:#fff !important; }
+    & svg * { fill:#fff !important; }
+    &:is(:hover, :focus-visible) { background:var(--cm-blue-dark) !important; }
+  }
+}

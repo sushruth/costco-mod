@@ -1,7 +1,9 @@
 /* The newer React header (home, search, product pages). React owns these nodes, so the layout changes with CSS only:
    blue category row on top with warehouse and ZIP at its right end, then one row of logo, search and account links. */
 :root.cm-on.cm-p-header header:has([data-testid=SearchBarUI]) > div {
-  display:grid !important; grid-template-columns:minmax(0, 1fr) auto;
+  display:grid !important; grid-template-columns:minmax(0, 1fr) auto; container-type:inline-size;
+  /* the blue row's ends line up with the 1440px white row below, like the cart */
+  --cm-edge:max(24px, calc((100cqw - 1440px) / 2 + 24px));
   & > div:has([data-testid=AnnouncementBanner]) { display:none !important; }
 
   /* logo, search, account links */
@@ -10,8 +12,8 @@
     & > div { padding:0 !important; }
     & > div > div:first-child:has(nav[data-testid=LinkList]) { display:none !important; }
     & > div > div:has([data-testid=SearchBarUI]) { padding:8px 24px !important; margin:0 !important; height:auto !important; min-height:0 !important; }
-    & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:auto !important; object-fit:contain; object-position:left center; }
-    & [data-testid=SearchBarUI] :is(input, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
+    & :has(> [data-testid=Link_homepagelink_SearchStrip]), & [data-testid=Link_homepagelink_SearchStrip] { width:auto !important; flex:none !important; }
+    & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:calc(32px * 1400 / 412) !important; min-width:0 !important; max-width:none !important; }
     & nav[data-testid=LinkList] :is(a, button) { font-size:14px !important; }
   }
 
@@ -21,7 +23,7 @@
     grid-row:1; grid-column:1; background:var(--cm-blue) !important; height:36px;
     & > div { background:none !important; }
     & > div, & > div > nav { height:36px !important; min-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; }
-    & > div > nav { width:100%; }
+    & > div > nav { width:100%; box-sizing:border-box; padding-left:var(--cm-edge) !important; }
     & > div > nav > ul { display:flex !important; flex-wrap:wrap !important; height:36px; overflow:hidden; }
     & > div > nav > ul > li { height:36px !important; min-height:0 !important; }
     & > div > nav > ul > li > :is(a, button, div) > :is(a, button), & > div > nav > ul > li > :is(a, button) { height:36px !important; min-height:0 !important; font-size:14px !important; }
@@ -29,7 +31,7 @@
 
   /* warehouse · hours | ZIP | Lists | Buy Again, in white at the right end of the blue row */
   & > div:has([data-testid=WarehouseSelectorUI]) {
-    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 24px 0 0 !important; background:var(--cm-blue) !important;
+    grid-row:1; grid-column:2; height:36px !important; min-height:0 !important; padding:0 var(--cm-edge) 0 0 !important; background:var(--cm-blue) !important;
     & > div { background:none !important; height:36px !important; min-height:0 !important; padding:0 !important; }
     /* every wrapper becomes one centered row */
     & :is(div, nav):has(> :is(div, nav, a, button)) {

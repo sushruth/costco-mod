@@ -1,0 +1,6 @@
+# your own saved cart pages hold personal data; keep them local
+cart.html
+cart_files/
+cart.preview.html
+cart.before.html
+.DS_Store

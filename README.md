@@ -1,4 +1,4 @@
-# Costco Cart, Cleaned Up
+# Costco, Cleaned Up
 
 This userscript makes costco.com denser and easier to scan. Every page gets a two-row header, and the cart gets shorter.
 

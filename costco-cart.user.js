@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Costco Cart, Cleaned Up
+// @name         Costco, Cleaned Up
 // @namespace    https://github.com/sushruth/costco-mod
-// @version      0.5.0
+// @version      0.5.1
 // @description  Restyles costco.com in place: a compact header on every page, and a cart with compact item cards, an order review panel with promo end dates, delivery-day checks and a breakdown of order discounts. Everything stays in your browser.
 // @match        https://www.costco.com/*
 // @run-at       document-idle

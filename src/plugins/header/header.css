@@ -1,0 +1,46 @@
+/* Blue category row on top; one white row of logo, search, account links, cart and settings. */
+:root.cm-on.cm-p-header {
+  & #header-widget {
+    & ul.top-links { display:none !important; }
+    & .table-container.parent { padding:8px 0 !important; }
+    & .right-cell { padding-top:0 !important; }
+    & .logo { padding-right:20px !important; vertical-align:middle !important; }
+    & .logo img { height:32px !important; width:auto !important; }
+    & #search-widget input { height:36px !important; font-size:14px !important; border-radius:4px !important; }
+    & .account-cart {
+      padding-left:20px !important; vertical-align:middle !important;
+      & nav { display:flex; align-items:center; justify-content:flex-end; }
+      & ul { display:flex !important; align-items:center; margin:0 !important; padding:0 !important; }
+      & li { border:0 !important; display:flex !important; align-items:center; margin:0 !important; padding:0 !important; height:36px; }
+      & li::after { content:none !important; display:none !important; }
+      /* links: blue 14px, short grey dividers */
+      & :is(li > a, li > button):not(#cart-d, .cm-gear) { font-size:14px !important; line-height:20px !important; color:var(--cm-blue) !important; padding:0 12px !important; white-space:nowrap; }
+      & li + li::before, & #banner-list-actions + ul > li:first-child::before { content:""; width:1px; height:14px; background:var(--cm-line-strong); }
+      & li:has(> #cart-d)::before, & li:has(.cm-gear)::before { content:none !important; }
+    }
+    /* cart: an outlined button with the count as a pill */
+    & #cart-d {
+      position:relative; display:inline-flex !important; align-items:center; gap:8px; height:36px; margin-left:8px; padding:0 14px !important;
+      border:1px solid var(--cm-blue); border-radius:4px; font-size:14px !important; font-weight:600; color:var(--cm-blue) !important; text-decoration:none !important;
+      &:is(:hover, :focus-visible) { background:var(--cm-blue-tint); }
+      & *, & *::before { text-decoration:none !important; }
+      & i.co-cart-rwd { display:none; }
+      & .cm-ic { font-size:20px; vertical-align:0; }
+      & .offscreen { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+      & .cart-number { position:static !important; order:2; margin:0 !important; }
+      & .cart-number > div { position:static !important; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:var(--cm-blue);
+        color:#fff; font-size:12px; line-height:20px; text-align:center; }
+    }
+  }
+  & .mini-banner { display:none !important; }
+
+  & #navigation-widget {
+    position:relative; z-index:20;
+    & nav.menu { display:flex !important; align-items:center; height:36px; overflow:hidden; }
+    & .nav-item, & #navigation-dropdown { flex:none; height:36px !important; min-height:0 !important; padding:0 12px !important;
+      display:inline-flex !important; align-items:center; gap:4px; }
+    & #navigation-dropdown { padding-left:0 !important; }
+    & .nav-item[data-cm-overflow] { display:none !important; }
+    & :is(.nav-item > a, #navigation-dropdown) { font-size:14px !important; line-height:20px !important; padding:0 !important; }
+  }
+}

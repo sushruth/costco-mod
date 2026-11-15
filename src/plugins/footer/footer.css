@@ -1,0 +1,74 @@
+/* Costco's footer: every link stays, set dense. */
+:root.cm-on.cm-p-footer {
+  & #cart { padding-bottom:24px !important; }
+
+  & #footer-widget {
+    margin-top:0 !important; padding:0 !important; font-size:12px; line-height:18px;
+    & > .container-fluid { padding-block:16px 12px !important; }
+    & a { color:var(--cm-ink-2); }
+    & a:hover { color:var(--cm-blue); }
+
+    /* tools strip: [? Get help]  Find a warehouse [____ ⌕]  Email offers [____|Go]  Follow [f P ◎]  App [C] */
+    & .footer-input-boxes {
+      padding:0 0 12px !important; margin:0 !important; border-bottom:1px solid var(--cm-line-strong);
+      & .row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 28px; margin:0 !important; }
+      & .row::before, & .row::after { display:none; }
+      & .row > div { float:none; width:auto !important; padding:0 !important; min-height:0; margin:0 !important; display:flex !important; align-items:center; gap:8px; }
+      & :is(label, .h5-style-guide) { margin:0 !important; font-size:12px !important; line-height:16px !important; font-weight:400 !important; color:var(--cm-ink-3); white-space:nowrap; }
+      /* "Customer Service" heading repeats the link group below; the link says it */
+      & .row > div:has(.get-help) > .h5-style-guide { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+      & .form-group { margin:0 !important; }
+      & .input-group { display:flex; align-items:stretch; width:auto; }
+      & input.form-control { width:200px !important; height:32px !important; padding:4px 10px !important; font-size:13px !important;
+        border:1px solid var(--cm-line-strong) !important; border-radius:4px 0 0 4px !important; box-shadow:none !important; background:#fff; }
+      & input.form-control:focus { border-color:var(--cm-blue) !important; outline:none; }
+      & .input-group-btn { display:flex; width:auto; }
+      & .input-group-btn :is(.btn, button) { height:32px !important; min-height:0 !important; padding:0 12px !important; font-size:13px !important; font-weight:600;
+        border:1px solid var(--cm-blue) !important; border-radius:0 4px 4px 0 !important; background:var(--cm-blue); color:#fff; }
+      & #footer-find-warehouse-block .input-group-btn :is(.btn, button) { background:#fff; color:var(--cm-blue); border-color:var(--cm-line-strong) !important; border-left:0 !important; }
+      & .input-group-btn .cm-ic { font-size:18px !important; }
+      & .get-help { display:flex; margin:0 !important; padding:0 !important; }
+      & .get-help a { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 !important; margin:0 !important; font-size:13px; line-height:20px; font-weight:600; color:var(--cm-blue); }
+      & .get-help a span { line-height:20px !important; padding:0 !important; }
+      & .get-help a::before { display:none !important; }
+      & .get-help .cm-ic { font-size:20px; }
+      /* Costco's images and glyphs give way to the Phosphor icons the script adds */
+      & .cm-swapped > :not(.cm-ic) { display:none !important; }
+      & .cm-swapped .cm-ic { font-size:20px; vertical-align:0; }
+      & .social-icons { display:flex; gap:4px; width:auto !important; min-width:0 !important; margin:0 !important; padding:0 !important; }
+      & .social-icons :is(li, a) { width:auto !important; min-width:0 !important; margin:0 !important; padding:0 !important; }
+      & .social-icons a { display:grid; place-items:center; width:28px !important; height:28px; border-radius:4px; color:var(--cm-ink-2); }
+      & .social-icons a:hover { background:#fff; color:var(--cm-blue); }
+    }
+
+    /* five link groups in one row */
+    & #footer-list { padding:12px 0 !important; margin:0 !important; border-bottom:1px solid var(--cm-line-strong); }
+    /* columns size to their links and spread edge to edge */
+    & #footer-list .footer-items { display:grid; grid-template-columns:repeat(5, auto); justify-content:space-between; gap:0 32px; margin:0 !important; }
+    & #footer-list .footer-items::before, & #footer-list .footer-items::after { display:none; }
+    & #footer-list .footer-items > div { display:contents; }
+    & ul.footer-list {
+      margin:0 !important; padding:0 !important; list-style:none;
+      & li { margin:0 !important; padding:0 !important; font-size:12px !important; line-height:18px !important; }
+      & li a { font-size:12px !important; line-height:18px !important; }
+      & li.footer-column-title { margin-bottom:4px !important; }
+      & li.footer-column-title, & li.footer-column-title a { font-size:13px !important; font-weight:600; color:var(--cm-ink) !important; }
+    }
+
+    /* legal links, then copyright, on one line */
+    & #footer-bottom {
+      /* legal links on one line, the copyright under them, both centered */
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 16px; padding:10px 0 0 !important; margin:0 !important; text-align:center;
+      & ul.links { display:contents; }
+      & ul.links li { display:flex; align-items:center; margin:0 !important; padding:0 !important; }
+      & ul.links :is(a, button) { font-size:12px !important; line-height:18px !important; padding:0 !important; }
+      & ul.links img { width:24px !important; height:12px !important; margin:0 4px 0 0 !important; }
+      & ul.social-icons:empty { display:none; }
+      & p.copyright { flex-basis:100%; margin:0 !important; font-size:12px !important; color:var(--cm-ink-3); }
+    }
+  }
+
+  @media (width <= 1024px) {
+    & #footer-widget #footer-list .footer-items { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px 24px; }
+  }
+}

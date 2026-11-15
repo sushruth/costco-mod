@@ -1,0 +1,18 @@
+/* Every node in the cart gets an outline; the color steps with nesting depth so stray boxes and gaps show. */
+:root.cm-p-redlines #cart-body * { outline:1px solid hsl(0 0% 50% / .5) !important; outline-offset:-1px; }
+:root.cm-p-redlines #cart-body > * { outline-color:hsl(0 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * { outline-color:hsl(47 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * { outline-color:hsl(94 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * { outline-color:hsl(141 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * { outline-color:hsl(188 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * { outline-color:hsl(235 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * { outline-color:hsl(282 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * { outline-color:hsl(329 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * { outline-color:hsl(16 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(63 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(110 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(157 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(204 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(251 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(298 80% 50% / .6) !important; }
+:root.cm-p-redlines #cart-body > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * > * { outline-color:hsl(345 80% 50% / .6) !important; }

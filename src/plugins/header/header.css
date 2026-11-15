@@ -9,7 +9,7 @@
     & .account-cart {
       padding-left:20px !important; vertical-align:middle !important;
       & nav { display:flex; align-items:center; justify-content:flex-end; }
-      & ul { display:flex !important; align-items:center; margin:0 !important; padding:0 !important; }
+      & ul { display:flex !important; align-items:center; margin:0 !important; padding:0 !important; top:0 !important; }
       & li { border:0 !important; display:flex !important; align-items:center; margin:0 !important; padding:0 !important; height:36px; }
       & li::after { content:none !important; display:none !important; }
       /* links: blue 14px, short grey dividers */
@@ -34,8 +34,9 @@
   & .mini-banner { display:none !important; }
 
   & #navigation-widget {
-    position:relative; z-index:20;
-    & nav.menu { display:flex !important; align-items:center; height:36px; overflow:hidden; }
+    position:relative; z-index:20012; /* above the white row (20011), so popups from the blue row show */
+    background:var(--cm-blue) !important; /* same blue as the newer header */
+    & nav.menu { display:flex !important; align-items:center; height:36px; overflow-x:clip; overflow-y:visible; }
     & .nav-item, & #navigation-dropdown { flex:none; height:36px !important; min-height:0 !important; padding:0 12px !important;
       display:inline-flex !important; align-items:center; gap:4px; }
     & #navigation-dropdown { padding-left:0 !important; }

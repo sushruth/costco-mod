@@ -12,7 +12,7 @@
     & > div { padding:0 !important; }
     & > div > div:first-child:has(nav[data-testid=LinkList]) { display:none !important; }
     & > div > div:has([data-testid=SearchBarUI]) { padding:8px 24px !important; margin:0 !important; height:auto !important; min-height:0 !important; gap:20px !important; }
-    & :has(> [data-testid=Link_homepagelink_SearchStrip]), & [data-testid=Link_homepagelink_SearchStrip] { width:auto !important; flex:none !important; }
+    & :has(> [data-testid=Link_homepagelink_SearchStrip]), & [data-testid=Link_homepagelink_SearchStrip] { width:auto !important; flex:none !important; margin:0 !important; align-self:center !important; height:auto !important; top:0 !important; }
     & [data-testid=Link_homepagelink_SearchStrip] img { height:32px !important; width:calc(32px * 1400 / 412) !important; min-width:0 !important; max-width:none !important; }
     /* account links like the cart: 14px blue, short grey dividers, Cart as an outlined button */
     & nav[data-testid=LinkList] {

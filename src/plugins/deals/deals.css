@@ -1,0 +1,8 @@
+/* Deal status beside Costco's "Valid A - B" line; deals that haven't started, or have ended, fade back. */
+:root.cm-on.cm-p-deals {
+  & .cm-deal-row { margin:0 0 2px; line-height:18px; }
+  & .cm-deal-tag.cm-urgent { color:var(--cm-red); font-weight:600; }
+  & .cm-pill.cm-deal-tag { display:inline-block; padding:0 8px; border:1px solid var(--cm-red); border-radius:999px; background:var(--cm-red); color:#fff; font-size:12px; line-height:16px; font-weight:600; }
+  & [data-testid=Grid][data-cm-deal=later], & [data-testid=Grid][data-cm-deal=ended] { opacity:.55; transition:opacity .15s; &:hover, &:focus-within { opacity:1; } }
+}
+:root:not(.cm-on) .cm-deal-row, :root:not(.cm-p-deals) .cm-deal-row { display:none; }

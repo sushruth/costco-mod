@@ -37,7 +37,7 @@ The costco-mod userscript restyles costco.com in place. The owner steers by reac
 3. **Redlines** (gear menu, dev build) for spacing work. Measure gaps with `getBoundingClientRect`, then name the numbers.
 4. **Review like a tree.** Shoot leaves (one node), then branches (neighbouring nodes together), then the whole page. Compare the same element across pages side by side, in two separate tabs.
 5. **Fix every case.** After a correction, find every place with the same problem: other pages, other card types (2-Day, email, pickup), desktop and mobile.
-6. **Commit or push only when asked.** Run `bun run build` first. No attribution lines.
+6. **Commit or push only when asked.** Run `bun run build` first. No attribution lines. When the owner says not to wait for approval, apply the skill's taste yourself, verify each change live, and commit and push to `main` without asking.
 
 ## Browser (Zen via the zen-devtools MCP)
 

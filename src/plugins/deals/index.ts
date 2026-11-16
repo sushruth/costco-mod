@@ -2,6 +2,7 @@ import { $, $$, el, ic } from '../../core/dom';
 import { DAY, longDate } from '../../core/format';
 import type { Plugin } from '../../core/plugin';
 import './deals.css';
+import { finePrint } from './fineprint';
 
 const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const now = () => new Date(new Date().toDateString());
@@ -63,9 +64,9 @@ function product() {
 
 export const deals: Plugin = {
   id: 'deals',
-  name: 'Deal and promo end dates',
+  name: 'Deal dates and product fine print',
   setup: () => {
-    const run = () => { grid(); product(); };
+    const run = () => { grid(); product(); finePrint(); };
     let t = 0;
     new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(run, 150); }).observe(document.body, { childList: true, subtree: true });
     run();

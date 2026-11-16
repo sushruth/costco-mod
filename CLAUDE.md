@@ -20,5 +20,6 @@ A Violentmonkey userscript (`costco-cart.user.js`) that restyles costco.com in p
 
 - `bun run dev` writes the dev build `dev/costco-cart.dev.user.js` (git-ignored, `__DEV__` true, no update URLs) on every change; Violentmonkey's "Track external edits" tab (open `http://127.0.0.1:8723/dev/costco-cart.dev.user.js` from `python3 -m http.server 8723`) picks up each build.
 - `bun run build` writes the published `costco-cart.user.js`; run it before committing. `bun run check` type-checks.
+- `bun run hero` rebuilds `docs/hero.png` from the `docs/compare/*-after.png` shots. The `.githooks/pre-commit` hook runs it when those shots change; turn it on once per clone with `git config core.hooksPath .githooks`.
 - Plugins marked `dev` (Redlines) only exist in the dev build and start switched off; switch them in the gear menu.
 - `bun dev/preview.ts` writes `cart.preview.html` from a saved `cart.html` with Costco's scripts stripped and the built userscript injected.

@@ -9,7 +9,8 @@
     "build": "bun dev/build.ts",
     "dev": "bun dev/build.ts --watch",
     "check": "tsc --noEmit",
-    "preview": "bun dev/preview.ts"
+    "preview": "bun dev/preview.ts",
+    "hero": "bun dev/hero.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",

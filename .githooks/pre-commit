@@ -1,0 +1,5 @@
+#!/bin/sh
+# Rebuild the README hero when the before/after shots change.
+if git diff --cached --name-only | grep -q '^docs/compare/.*-after\.png$'; then
+  bun run hero && git add docs/hero.png
+fi

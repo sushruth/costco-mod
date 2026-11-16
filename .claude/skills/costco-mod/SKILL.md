@@ -67,4 +67,6 @@ The costco-mod userscript restyles costco.com in place. The owner steers by reac
 
 - One thing per reply, SMS-short. Lead with the result.
 - When asked for thoughts, give a recommendation and wait; don't implement.
+- "Could X get Y-like design updates?" asks for the same look on X. Answer in design terms; whether code is reused is beside the point.
+- Before and after shots show the same page state: the same cart, the same scroll anchor.
 - Report only what you checked. Say "I don't know" when you don't.

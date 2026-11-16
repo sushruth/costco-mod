@@ -41,6 +41,9 @@ function grid() {
     leaf.dataset.cmDeal = '';
     const card = leaf.closest<HTMLElement>('[data-testid=Grid]');
     if (!card) continue; // section headings and banners keep Costco's own line
+    // "Online Only", "Warehouse Only" or "Warehouse & Online", for the pill's colour on the photo.
+    const chan = $('div:has(> div > [data-testid=MarkdownRenderer]) > :first-child', card)?.textContent ?? '';
+    card.dataset.cmChan = /Warehouse/.test(chan) ? (/Online/.test(chan) ? 'both' : 'warehouse') : /Online/.test(chan) ? 'online' : '';
     const [a, b] = (leaf.textContent ?? '').slice(6).split(/\s+-\s+/).map(day);
     if (!(b ?? a)) continue;
     const [state, tag] = status(b ? a : null, (b ?? a)!);

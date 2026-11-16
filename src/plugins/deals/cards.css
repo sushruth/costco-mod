@@ -1,29 +1,45 @@
-/* Savings page deal cards, styled like the search tiles: a grid of rounded photos, a 14px 2-line title,
-   "Item | Limit" as one grey line, a 17px price with its "After $X OFF" in small green, then the date and button. */
+/* Savings page deal cards, drawn like the search tiles: a rounded photo with the channel as a pill in its corner,
+   a 14px 2-line title, the deal's dates as one small line, then the price with "After $X OFF" under it and
+   Buy Online as an outlined cart icon at the right. */
 :root.cm-on.cm-p-deals {
   & [data-testid=Grid]:has(> [data-testid=Grid][data-cm-deal]) {
     display:grid !important; grid-template-columns:repeat(auto-fill, minmax(min(176px, calc(50% - 14px)), 1fr)); gap:40px 28px !important;
     margin:0 !important; width:auto !important; padding:24px 0 !important;
   }
   & [data-testid=Grid][data-cm-deal] {
-    max-width:none !important; width:auto !important; flex:none !important; padding:0 !important; margin:0 !important; border:0 !important;
+    position:relative; max-width:none !important; width:auto !important; flex:none !important; padding:0 !important; margin:0 !important; border:0 !important;
     & > div { height:100%; display:flex; flex-direction:column; }
     & > div > div:first-child { padding:0 !important; margin:0 0 10px !important; height:auto !important; }
     & img[data-testid=media-asset] { width:100% !important; height:auto !important; aspect-ratio:1; object-fit:contain; border-radius:8px;
       box-shadow:0 1px 2px rgb(0 0 0 / .06), 0 4px 14px rgb(0 0 0 / .07); } /* a soft edge for white photos on a white page */
     & > div > div:nth-child(2) { padding:0 !important; flex:1; display:flex; flex-direction:column; }
     & > div > div:nth-child(2) > div { width:auto !important; padding:0 !important; margin:0 !important; height:auto !important; min-height:0 !important; }
-    & > div > div:nth-child(2) > div:first-child { flex:1; } /* prices, dates and buttons line up across a row */
 
-    /* "Online Only", "Warehouse & Online" */
-    & div:has(> div > [data-testid=MarkdownRenderer]) > :first-child:not(:has([data-testid=MarkdownRenderer])) { &, & * { font-size:12px !important; line-height:16px !important; } margin:0 0 2px !important; }
+    /* the channel as a pill in the photo's top-left corner, like the search tiles' Online Only */
+    & div:has(> div > [data-testid=MarkdownRenderer]) > :first-child:not(:has([data-testid=MarkdownRenderer])) {
+      position:absolute; top:0; left:0; z-index:2; margin:0 !important; padding:2px 8px 2px 6px !important; display:flex !important; width:auto !important;
+      border-radius:8px 999px 999px 0; background:var(--cm-blue); border-style:solid; border-color:rgb(255 255 255 / .7); border-width:0 1px 1px 0;
+      &, & * { font-size:11px !important; line-height:16px !important; font-weight:400 !important; color:#fff !important; white-space:nowrap; }
+      & * { display:inline !important; margin:0 !important; }
+    }
+    &[data-cm-chan=warehouse] div:has(> div > [data-testid=MarkdownRenderer]) > :first-child { background:var(--cm-red); }
     & [data-testid=MarkdownRenderer] [data-testid=Text] { margin:0 !important; font-size:14px !important; line-height:18px !important; font-weight:400 !important;
       display:-webkit-box !important; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    & div:has(> [data-testid=MarkdownRenderer]) ~ div:not(:has([data-testid^=Text_prices])) {
-      display:block !important; margin:2px 0 0 !important; font-size:12px !important; line-height:16px !important;
-      & > [data-testid=Text] { display:inline !important; width:auto !important; font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3) !important; }
-      & > [data-testid=Text] + [data-testid=Text]::before { content:"|"; margin:0 6px; }
-    }
+    /* item numbers, limits and spec lines: search tiles show none; the product page has them */
+    & div:has(> [data-testid=MarkdownRenderer]) ~ div:not(:has([data-testid^=Text_prices])) { display:none !important; }
+
+    /* dates sit right under the title, like the search tiles' rating row; the price row drops to the card's foot so prices line up across a row */
+    & > div > div:nth-child(2) > div:first-child { flex:none !important; }
+    & > div > div:nth-child(2) > div:last-child { flex:1 !important; display:grid !important; grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto auto 1fr auto; column-gap:6px; align-items:start; }
+    & div:has(> a[data-testid=Button]), & div:has(> div > [data-testid=Text][aria-hidden]), & div:has(> div > [data-testid=Text_prices_and_percentages_append_text]):not(:has(a)) { display:contents !important; }
+    & .cm-deal-row { grid-column:1 / -1; grid-row:1; margin:6px 0 0 !important; font-size:12px; line-height:16px; }
+    & div:has(> [data-testid=Text][aria-hidden]) { grid-column:1 / -1; grid-row:2; margin:2px 0 0 !important; height:auto !important; min-height:0 !important;
+      & [data-testid=Text] { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3) !important; }
+      /* Costco lays the visible line absolutely over a hidden spacer; back into the flow, under the title */
+      & > [data-testid=Text][aria-hidden] { display:none !important; }
+      & > [data-testid=Text]:not([aria-hidden]) { position:static !important; } }
+    & div:has(> div > [data-testid=Text][aria-hidden]) > div:empty { display:none !important; }
+    & > div > div:nth-child(2) > div:last-child > div:first-child { grid-column:1; grid-row:4; padding-top:10px !important; }
 
     /* Costco draws "$29.99" as superscript pieces with a screen-reader-only dot; one plain 17px line. */
     & [data-testid=Text_prices_and_percentages_prices], & [data-testid=Text_prices_and_percentages_prices] span {
@@ -31,12 +47,24 @@
       display:inline !important; position:static !important; vertical-align:baseline !important; top:0 !important; width:auto !important; height:auto !important;
       overflow:visible !important; clip:auto !important; clip-path:none !important; margin:0 !important; padding:0 !important; white-space:nowrap !important;
     }
-    & :is([data-testid=Text_prices_and_percentages_append_text], [data-testid=Text_prices_and_percentages_prepend_text]) {
-      margin:0 !important; padding:0 !important; font-size:11px !important; line-height:14px !important; font-weight:600 !important; color:var(--cm-green) !important;
-    }
+    & div:has(> [data-testid=Text_prices_and_percentages_prepend_text]) { display:flex !important; flex-direction:row !important; align-items:baseline; gap:4px; }
+    & [data-testid=Text_prices_and_percentages_prepend_text] { margin:0 !important; padding:0 !important; font-size:17px !important; line-height:22px !important; font-weight:700 !important; color:var(--cm-green) !important; }
+    & [data-testid=Text_prices_and_percentages_append_text] { margin:0 !important; padding:0 !important; font-size:11px !important; line-height:14px !important; font-weight:600 !important; color:var(--cm-green) !important; }
     & div:is(:has(> [data-testid=Text_prices_and_percentages_prices]), :has(> div > [data-testid=Text_prices_and_percentages_prices]), :has(> [data-testid=Text_prices_and_percentages_append_text])) {
-      height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important;
+      height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important; width:auto !important;
     }
-    & a[data-testid=Button] { margin-top:8px !important; }
+    & div:is(:has(> div > [data-testid=Text_prices_and_percentages_prices]), :has(> div > div > [data-testid=Text_prices_and_percentages_prices])) { justify-content:flex-start !important; } /* Costco centres the price */
+
+    /* Buy Online: an outlined cart icon; solid blue only on the card under the pointer, so one primary button shows at a time */
+    & a[data-testid=Button] {
+      grid-column:2; grid-row:4; margin:10px 0 0 !important; display:flex !important; align-items:center; justify-content:center;
+      width:36px !important; min-width:0 !important; height:32px !important; min-height:0 !important; padding:0 !important; font-size:0 !important;
+      border-radius:6px !important; box-shadow:none !important; background:none !important; color:var(--cm-blue) !important;
+      border-width:1px !important; border-style:solid !important; border-color:var(--cm-line-strong) !important;
+      & * { display:none !important; }
+      &::before { content:"\e420"; display:block; font-family:Phosphor; font-size:18px; line-height:1; } /* cart */
+    }
+    &:is(:hover, :focus-within) a[data-testid=Button] { background:var(--cm-blue) !important; border-color:var(--cm-blue) !important; color:#fff !important;
+      &:hover { background:var(--cm-blue-dark) !important; border-color:var(--cm-blue-dark) !important; } }
   }
 }

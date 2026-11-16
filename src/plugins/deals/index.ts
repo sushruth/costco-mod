@@ -51,15 +51,17 @@ function grid() {
 
 // Product pages: the promo's end date sits in fine print; show it under "$8 OFF was $41.99", and drop the second "$8 OFF".
 function product() {
+  const card = $('[data-testid=pricing-card]');
+  const off = card && $('[data-testid=Text_promo-amount-off]', card)?.textContent;
+  // React redraws the fine print, so this check runs every time.
+  for (const s of card ? $$(':is([data-testid^="Text_shortText-"], [data-testid=Text_combined-short-text]):not([data-cm-dup])', card) : []) if (off && s.textContent?.trim() === `${off} OFF`) s.dataset.cmDup = '';
   const promo = $('[data-testid=pricing-card] [data-testid=promo-price]:not([data-cm-deal])');
-  const fine = $('[data-testid=pricing-card] [data-testid^="Text_longText-"]');
+  const fine = $('[data-testid=pricing-card] :is([data-testid^="Text_longText-"], [data-testid=Text_combined-long-text])');
   const end = fine?.textContent?.match(/through (\d{1,2}\/\d{1,2}\/\d{2,4})/)?.[1];
   if (!promo || !end) return;
   promo.dataset.cmDeal = '';
   const tag = status(null, day(end)!, true)[1];
   if (tag) promo.append(tag);
-  const short = $('[data-testid^="Text_shortText-"]', fine!.parentElement!), off = $('[data-testid=Text_promo-amount-off]', promo)?.textContent;
-  if (short && off && short.textContent?.trim() === `${off} OFF`) short.dataset.cmDup = '';
 }
 
 export const deals: Plugin = {

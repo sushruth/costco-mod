@@ -2,6 +2,8 @@
 :root.cm-on.cm-p-deals {
   & .cm-deal-row { margin:0 0 2px; line-height:18px; }
   & [data-testid=promo-price] .cm-deal-row { margin:2px 0 0; }
+  /* Some product pages fix the price row at 32px; let it grow so the badge doesn't overlap the fine print. */
+  & :is([data-testid=price], [data-testid=price] div):has(.cm-deal-row) { height:auto !important; }
   & [data-cm-dup] { display:none !important; }
   & .cm-free { margin-left:30px; color:var(--cm-green); }
   & [data-cm-fine]:not(.cm-fine-open) > * { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; overflow:hidden; }

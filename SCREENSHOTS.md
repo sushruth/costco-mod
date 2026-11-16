@@ -32,7 +32,7 @@ The Shop by Category grid fits on one screen.
 
 ## Savings
 
-Deal cards look like the search tiles: the channel as a pill on the photo, a 2-line title, the dates under it, then the price with Buy Online as a cart icon. Deals that haven't started yet fade back and show their start date, and Buy Online buttons are outlined.
+Deal cards look like the search tiles: the channel as a pill on the photo, a 2-line title, the dates under it, then the price with Buy Online as a cart icon. Deals that haven't started yet fade back and show their start date.
 
 | Before | After |
 | --- | --- |

@@ -1,0 +1,6 @@
+/* Warehouse locator: one 12px grey line replaces the two "hours start at" lines on each tile. */
+:root.cm-on.cm-p-locator {
+  & .cm-loc-hours { display:none !important; }
+  & .cm-loc-line { font-size:12px; line-height:18px; color:var(--cm-ink-3); margin:2px 0; }
+}
+:root:not(.cm-on) .cm-loc-line, :root:not(.cm-p-locator) .cm-loc-line { display:none; }

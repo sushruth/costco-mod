@@ -1,4 +1,4 @@
-import { $$, el, ic } from '../../core/dom';
+import { $, $$, el, ic } from '../../core/dom';
 import { DAY, longDate } from '../../core/format';
 import type { Plugin } from '../../core/plugin';
 import './deals.css';
@@ -19,35 +19,55 @@ function day(s: string) {
   return d;
 }
 
-// Each deal's "Valid A - B" line gets its status: starts later, ends soon, or ended.
-function mark() {
+type State = 'later' | 'ended' | 'live';
+// A deal's status line: starts later, ended, ends today, or ends within a week (or any time, with `always`).
+function status(start: Date | null, end: Date, always = false): [State, HTMLElement | null] {
+  const t = now().getTime(), left = Math.round((end.getTime() - t) / DAY);
+  const tag = (cls: string, ...kids: (Node | string)[]) => el('div', { class: 'cm-deal-row' }, el('span', { class: `${cls} cm-deal-tag` }, ...kids));
+  if (start && start.getTime() > t) return ['later', tag('cm-when', ic('calendar-blank'), `Starts ${longDate(start)}`)];
+  if (left < 0) return ['ended', tag('cm-when cm-urgent', 'Ended')];
+  if (left === 0) return ['live', tag('cm-pill', 'Ends today')];
+  if (left <= 7) return ['live', tag('cm-when cm-warn', ic('timer'), left === 1 ? 'Ends tomorrow' : `${left} days left`)];
+  return ['live', always ? tag('cm-when', ic('timer'), `Ends ${longDate(end)}`) : null];
+}
+
+// Savings pages: each deal's "Valid A - B" line gets its status; deals that haven't started fade back.
+function grid() {
   for (const leaf of $$('[data-testid=Text]:not([data-cm-deal])')) {
     // Costco draws the line twice: a hidden aria-hidden spacer, and the visible copy laid over it.
     if (leaf.children.length || leaf.ariaHidden === 'true' || !/^Valid /.test(leaf.textContent ?? '')) continue;
     leaf.dataset.cmDeal = '';
-    const [a, b] = (leaf.textContent ?? '').slice(6).split(/\s+-\s+/).map(day);
-    const start = b ? a : null, end = b ?? a;
-    if (!end) continue;
-    const t = now().getTime(), left = Math.round((end.getTime() - t) / DAY);
     const card = leaf.closest<HTMLElement>('[data-testid=Grid]');
     if (!card) continue; // section headings and banners keep Costco's own line
-    let tag: HTMLElement | null = null;
-    if (start && start.getTime() > t) tag = el('span', { class: 'cm-when cm-deal-tag' }, ic('calendar-blank'), `Starts ${longDate(start)}`);
-    else if (left < 0) tag = el('span', { class: 'cm-when cm-urgent cm-deal-tag' }, 'Ended');
-    else if (left === 0) tag = el('span', { class: 'cm-pill cm-deal-tag' }, 'Ends today');
-    else if (left <= 7) tag = el('span', { class: 'cm-when cm-warn cm-deal-tag' }, ic('timer'), left === 1 ? 'Ends tomorrow' : `${left} days left`);
-    card.dataset.cmDeal = start && start.getTime() > t ? 'later' : left < 0 ? 'ended' : 'live';
+    const [a, b] = (leaf.textContent ?? '').slice(6).split(/\s+-\s+/).map(day);
+    if (!(b ?? a)) continue;
+    const [state, tag] = status(b ? a : null, (b ?? a)!);
+    card.dataset.cmDeal = state;
     // The visible line is absolutely placed and full width, so the status gets its own row above it.
-    if (tag) leaf.parentElement?.before(el('div', { class: 'cm-deal-row' }, tag));
+    if (tag) leaf.parentElement?.before(tag);
   }
+}
+
+// Product pages: the promo's end date sits in fine print; show it under "$8 OFF was $41.99", and drop the second "$8 OFF".
+function product() {
+  const promo = $('[data-testid=pricing-card] [data-testid=promo-price]:not([data-cm-deal])');
+  const fine = $('[data-testid=pricing-card] [data-testid^="Text_longText-"]');
+  const end = fine?.textContent?.match(/through (\d{1,2}\/\d{1,2}\/\d{2,4})/)?.[1];
+  if (!promo || !end) return;
+  promo.dataset.cmDeal = '';
+  const tag = status(null, day(end)!, true)[1];
+  if (tag) promo.append(tag);
+  const short = $('[data-testid^="Text_shortText-"]', fine!.parentElement!), off = $('[data-testid=Text_promo-amount-off]', promo)?.textContent;
+  if (short && off && short.textContent?.trim() === `${off} OFF`) short.dataset.cmDup = '';
 }
 
 export const deals: Plugin = {
   id: 'deals',
-  name: 'Deal status on savings pages',
+  name: 'Deal and promo end dates',
   setup: () => {
+    const run = () => { grid(); product(); };
     let t = 0;
-    new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(mark, 150); }).observe(document.body, { childList: true, subtree: true });
-    mark();
+    new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(run, 150); }).observe(document.body, { childList: true, subtree: true });
+    run();
   },
 };

@@ -1,6 +1,7 @@
 import { $, $$, el, text } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
 import './search.css';
+import './category.css';
 import './sidebar.css';
 import s from './search.module.css';
 import { priceSlider } from './price';
@@ -52,7 +53,7 @@ function tiles() {
 // filters change, so new tiles are picked up as they appear.
 export const search: Plugin = {
   id: 'search',
-  name: 'Compact search results',
+  name: 'Compact search and category pages',
   setup: () => {
     let t = 0;
     new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(() => { tiles(); filters(); }, 100); }).observe(document.body, { childList: true, subtree: true });

@@ -32,7 +32,7 @@ The Shop by Category grid fits on one screen.
 
 ## Savings
 
-Deals that haven't started yet fade back and show their start date, and Buy Online buttons are outlined.
+Deal cards get the search tile look: rounded photos, a 2-line title, "Item | Limit" on one line and a 17px price. Deals that haven't started yet fade back and show their start date, and Buy Online buttons are outlined.
 
 | Before | After |
 | --- | --- |

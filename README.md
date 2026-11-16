@@ -10,7 +10,7 @@ This userscript makes costco.com denser and easier to scan. Every page gets a tw
 
 ## Install
 
-1. Install a userscript manager: [Violentmonkey](https://violentmonkey.github.io/), [Tampermonkey](https://www.tampermonkey.net/), [ScriptCat](https://docs.scriptcat.org/) or [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) for Safari.
+1. Install a userscript manager: [<img src="https://raw.githubusercontent.com/violentmonkey/violentmonkey/master/src/resources/icon.svg" width="14" height="14" alt=""> Violentmonkey](https://violentmonkey.github.io/), [<img src="https://www.tampermonkey.net/images/icon.png" width="14" height="14" alt=""> Tampermonkey](https://www.tampermonkey.net/), [<img src="https://docs.scriptcat.org/img/logo.png" width="14" height="14" alt=""> ScriptCat](https://docs.scriptcat.org/) or [<img src="https://raw.githubusercontent.com/quoid/userscripts/main/public/ext/safari-15/images/icon-64.png" width="14" height="14" alt=""> Userscripts](https://apps.apple.com/app/userscripts/id1463298887) for Safari.
 2. Click **Install** above.
 
 The script is tested with Violentmonkey. To turn parts on or off, use the gear next to the cart.

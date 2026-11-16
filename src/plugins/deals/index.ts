@@ -2,6 +2,7 @@ import { $, $$, el, ic } from '../../core/dom';
 import { DAY, longDate } from '../../core/format';
 import type { Plugin } from '../../core/plugin';
 import './deals.css';
+import './cards.css';
 import { finePrint } from './fineprint';
 
 const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];

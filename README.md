@@ -15,6 +15,8 @@ This userscript makes costco.com denser and easier to scan. Every page gets a tw
 
 [![Install](https://img.shields.io/badge/Install-userscript-005DAB?style=for-the-badge)](https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js)
 
+<sub>What it looks like</sub>
+
 [<img src="docs/hero.png" alt="The restyled home, search, savings, product and cart pages, and the phone header" width="100%">](SCREENSHOTS.md)
 
 [Before and after, page by page](SCREENSHOTS.md). The screenshots blur the warehouse, ZIP code and the cart's prices and discounts.

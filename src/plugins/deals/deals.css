@@ -3,6 +3,12 @@
   & .cm-deal-row { margin:0 0 2px; line-height:18px; }
   & [data-testid=promo-price] .cm-deal-row { margin:2px 0 0; }
   & [data-cm-dup] { display:none !important; }
+  /* One primary button per view: each deal's Buy Online is outlined until hovered or focused. */
+  & [data-testid=Grid][data-cm-deal] a[data-testid=Button] {
+    min-height:32px !important; height:32px !important; font-size:14px !important;
+    background:#fff !important; color:var(--cm-blue) !important; border-width:1px !important; border-style:solid !important; border-color:var(--cm-blue) !important; border-radius:4px !important;
+    &:hover, &:focus-visible { background:var(--cm-blue) !important; color:#fff !important; }
+  }
   & .cm-deal-tag.cm-urgent { color:var(--cm-red); font-weight:600; }
   & .cm-pill.cm-deal-tag { display:inline-block; padding:0 8px; border:1px solid var(--cm-red); border-radius:999px; background:var(--cm-red); color:#fff; font-size:12px; line-height:16px; font-weight:600; }
   & [data-testid=Grid][data-cm-deal=later], & [data-testid=Grid][data-cm-deal=ended] { opacity:.55; transition:opacity .15s; &:hover, &:focus-within { opacity:1; } }

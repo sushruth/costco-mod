@@ -58,7 +58,7 @@
     & #shop-card-block * { font-size:13px !important; line-height:18px !important; }
     & #shop-card-block img { height:28px !important; width:auto !important; }
     & #credit-card-block-review { margin-bottom:6px !important; }
-    /* card box: radio, logo and card details on one line, Click to Pay under it, the billing address under the details */
+    /* card box: radio, logo and card details on one line, Click to Pay under it */
     & .card-container { display:flex; align-items:center; gap:10px; }
     & .card-image { width:auto !important; flex:none; margin:0 !important; padding:0 !important; }
     & .card-information { font-size:13px !important; line-height:18px !important; margin:0 !important; padding:0 !important; }
@@ -67,9 +67,11 @@
     & .control--radio { display:flex !important; align-items:center; min-height:24px; }
     & .control--radio .control__indicator { top:50% !important; margin:-8px 0 0 !important; }
     & #clickpay-image-display { height:24px !important; width:auto !important; padding:0 !important; margin:0 !important; }
+    /* the billing address covers whichever option is picked: its own block under a divider, flush left */
+    & #payment-address-form { border-top:1px solid var(--cm-line); margin-top:10px !important; }
     & #payment-address-form h3 { margin:10px 0 2px !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
     & #payment-address-form .address-display { padding:0 !important; margin:0 !important; }
-    & #address-block-billing { padding-left:25px; & .bill-address-title { padding:0 !important; } }
+    & #address-block-billing { padding-left:0 !important; & .bill-address-title { padding:0 !important; } }
     /* "or", then Affirm */
     & .hr-div { display:flex; align-items:center; gap:8px; margin:10px 0 !important; position:static !important;
       & hr { display:block !important; flex:1; margin:0 !important; border:0 !important; border-top:1px solid var(--cm-line) !important; }

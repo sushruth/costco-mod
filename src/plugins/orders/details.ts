@@ -19,6 +19,13 @@ function item(block: HTMLElement) {
   const col = no?.parentElement;
   if (!col) return;
   set(col, 'col');
+  set(col.firstElementChild, 'title');
+  const img = block.querySelector('img')?.closest('div');
+  set(img, 'img');
+  // Costco's wrappers between the block and its parts flatten (display:contents) so the parts sit on one grid
+  for (const start of [col, img, block.querySelector('[data-cm-od=services]')]) {
+    for (let x = start?.parentElement; x && x !== block; x = x.parentElement) if ((x as HTMLElement).dataset.cmWrap !== '1') (x as HTMLElement).dataset.cmWrap = '1';
+  }
   for (const k of col.children) {
     const t = txt(k);
     if (k === no) set(k, 'itemno');
@@ -54,5 +61,15 @@ export function markDetails() {
   set(card, 'card');
   const st = card && [...card.querySelectorAll('*')].find((d) => !d.children.length && /^(Order Placed|Cancelled|Delivered|Shipped|Processing|Picked Up|Order Complete|Returned)$/i.test(txt(d)));
   if (st instanceof HTMLElement) { set(st, 'status'); set(st.parentElement, 'statuswrap'); st.dataset.cmSt = /cancel/i.test(txt(st)) ? 'cancelled' : 'active'; }
-  set($$('[class*=MuiPaper-outline]').find((p) => /Order Summary/.test(txt(p))), 'summary');
+  const sum = $$('[class*=MuiPaper-outline]').find((p) => /Order Summary/.test(txt(p)));
+  set(sum, 'summary');
+  const tog = sum?.querySelector('[role=button]');
+  if (tog instanceof HTMLElement && !tog.title) { set(tog, 'sumtoggle'); tog.title = 'Order Summary'; tog.setAttribute('aria-label', 'Order Summary'); }
+  const pi = document.getElementById('odprintInvoice');
+  if (pi && !pi.title) { pi.title = txt(pi); pi.setAttribute('aria-label', pi.title); set(pi.parentElement, 'titlerow'); }
+  let main: Element | null = all;
+  while (main && pi && !main.contains(pi)) main = main.parentElement;
+  set(main, 'odmain');
+  const ba = all.querySelector('a');
+  if (ba && !ba.title) { ba.title = txt(ba); ba.setAttribute('aria-label', ba.title); }
 }

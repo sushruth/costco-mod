@@ -20,11 +20,14 @@
   & [data-cm-od=sumtoggle][aria-expanded=true] { background:var(--cm-blue-tint) !important; border-color:var(--cm-blue) !important; }
   & [data-cm-od=card] { border:1px solid var(--cm-line) !important; border-radius:4px; padding:12px 16px !important;
     & hr { border-color:var(--cm-line) !important; margin:12px 0 !important; } }
-  & [data-cm-od=statuswrap] { padding:0 !important; margin:0 !important; }
-  & [data-cm-od=status] { display:inline-flex !important; align-items:center; width:fit-content !important; height:20px; padding:0 8px !important; border-radius:999px; border:1px solid currentColor;
-    background:var(--cm-blue-tint); color:var(--cm-blue) !important; font-size:12px !important; line-height:18px !important; font-weight:600 !important; }
-  & [data-cm-od=status][data-cm-st=cancelled] { background:var(--cm-surface-2); color:var(--cm-ink-3) !important; }
-
+  /* the order status moves up into the title row as a filled chip, left of the icons; its own row and divider go */
+  & [data-cm-od=card], & [data-cm-od=card] :has(> [data-cm-od=statuswrap]) { position:static !important; }
+  & [data-cm-od=statuswrap] { position:static !important; padding:0 !important; margin:0 !important; height:0 !important; min-height:0 !important;
+    & + hr, & + * > hr:first-child { display:none !important; } & + * { margin-top:0 !important; } }
+  & [data-cm-od=status] { position:absolute !important; top:2px; right:112px; left:auto !important; width:auto !important; display:inline-flex !important; align-items:center; gap:6px; height:28px; padding:0 12px !important; margin:0 !important;
+    border-radius:999px; background:var(--cm-blue) !important; color:#fff !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; white-space:nowrap;
+    &::before { content:"\e184"; font-family:Phosphor; font-size:15px; font-weight:400; line-height:1; } } /* check-circle */
+  & [data-cm-od=status][data-cm-st=cancelled] { background:var(--cm-ink-3) !important; &::before { content:"\e4f8"; } } /* x-circle */
   /* "Scheduled Delivery Saturday, November 21 · Room of Choice: Free · Shipping Terms" */
   & [data-cm-od=ship0] { display:inline-flex !important; gap:4px; align-items:baseline; margin:0 !important; min-height:0 !important; height:auto !important;
     &, & > * { font-size:12px !important; line-height:16px !important; margin:0 !important; } }

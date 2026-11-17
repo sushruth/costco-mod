@@ -41,13 +41,14 @@
 
   /* 2: title, then Costco Wallet (left) and the card (right), then the pre-authorization note */
   & #billing {
-    & > .row { display:grid !important; grid-template-columns:1fr 1fr; column-gap:16px; align-items:start; }
+    /* wallet, then the card box, each full width; inside the card box the cards sit left of the billing address */
+    & > .row { display:grid !important; grid-template-columns:1fr; align-items:start; }
     & > .row > * { grid-column:1 / -1; width:auto !important; height:auto !important; min-height:0 !important; float:none !important; }
     & > .row > :has(.section-title) { grid-row:1; margin-bottom:10px !important; }
-    & #payment-method-shop-card { grid-column:1; grid-row:2 / span 2; display:grid; grid-template-columns:1fr auto; align-items:center; padding:0 !important; }
-    & > .row > .col-xs-7:not(:has(.section-title)) { grid-column:2; grid-row:2; margin:0 0 6px !important; }
-    & > .row > .col-xs-12:has(.cc-border) { grid-column:2; grid-row:3; }
-    & > .row > .preauthcharges-text { grid-row:4; margin:8px 0 0 !important; font-size:12px; color:var(--cm-ink-3); }
+    & #payment-method-shop-card { grid-column:1; grid-row:2; margin-bottom:12px !important; display:grid; grid-template-columns:1fr auto; align-items:center; padding:0 !important; }
+    & > .row > .col-xs-7:not(:has(.section-title)) { grid-row:3; margin:0 0 6px !important; }
+    & > .row > .col-xs-12:has(.cc-border) { grid-row:4; }
+    & > .row > .preauthcharges-text { grid-row:5; margin:8px 0 0 !important; font-size:12px; color:var(--cm-ink-3); }
     & #checkout-espot-v2 { display:none !important; } /* the Costco Visa ad */
     & #payment-method-shop-card > * { grid-column:1 / -1; width:auto !important; float:none !important; }
     & #shop-card-text { grid-column:1; grid-row:1; }
@@ -67,9 +68,13 @@
     & .control--radio { display:flex !important; align-items:center; min-height:24px; }
     & .control--radio .control__indicator { top:50% !important; margin:-8px 0 0 !important; }
     & #clickpay-image-display { height:24px !important; width:auto !important; padding:0 !important; margin:0 !important; }
-    /* the billing address covers whichever option is picked: its own block under a divider, flush left */
-    & #payment-address-form { border-top:1px solid var(--cm-line); margin-top:10px !important; }
-    & #payment-address-form h3 { margin:10px 0 2px !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
+    /* the billing address covers whichever option is picked: its own column right of the options */
+    & .cc-border { display:grid !important; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); column-gap:16px; align-items:start;
+      & > * { grid-column:1 / -1; width:auto !important; float:none !important; }
+      & > #payment-method-radio-buttons { grid-column:1; grid-row:1; }
+      & > .payment-method-change { grid-column:2; grid-row:1; } }
+    & .cc-border > #payment-address-form { grid-column:3; grid-row:1; border-left:1px solid var(--cm-line); padding-left:16px !important; }
+    & #payment-address-form h3 { margin:0 0 2px !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
     & #payment-address-form .address-display { padding:0 !important; margin:0 !important; }
     & #address-block-billing { padding-left:0 !important; & .bill-address-title { padding:0 !important; } }
     /* "or", then Affirm */

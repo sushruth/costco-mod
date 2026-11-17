@@ -44,7 +44,8 @@
       & .a11y-check::before { background:var(--cm-blue) !important; } & .a11y-check::after { transform:translateX(10px) !important; } }
     /* :is(*, :has(…)) matches the "on" rules' weight, so an empty wallet stays grey even when Costco has it switched on */
     & #payment-method-shop-card[data-cm-empty]:is(*, :has(.shop-card-input:checked)) { border-color:var(--cm-line);
-      & #shop-card-block:is(*, :has(.shop-card-input:checked)) { cursor:default; &:hover { background:none; } }
+      /* Costco can switch a $0 wallet on but never back off, so an empty wallet's switch takes no clicks; the + still works */
+      & #shop-card-block:is(*, :has(.shop-card-input:checked)) { cursor:default; pointer-events:none; &:hover { background:none; } }
       & strong#balance-label::before { color:var(--cm-ink-3); font-weight:400; }
       & img { opacity:.5; filter:grayscale(1); }
       & #shop-card-block:is(*, :has(.shop-card-input:checked)) .a11y-check { opacity:.4; &::before { background:var(--cm-line-strong) !important; } &::after { transform:none !important; } } }

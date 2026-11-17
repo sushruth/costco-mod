@@ -1,0 +1,56 @@
+/* Orders & Purchases: each order a light card with a one-line grey head (number · date · total, then the order button and
+   Buy Again as an icon), a status pill, and 56px item rows with the delivery on one small line. */
+:root.cm-on.cm-p-orders {
+  & [data-cm-o=toolbar] { display:flex !important; align-items:center !important; justify-content:space-between; gap:16px; margin:12px 0 !important; padding:0 !important; min-height:0 !important;
+    & > :first-child { display:flex !important; flex-wrap:wrap; align-items:baseline; gap:0 12px; & * { margin:0 !important; padding:0 !important; height:auto !important; min-height:0 !important; } }
+    & > :first-child, & > :first-child * { font-size:12px !important; line-height:16px !important; }
+    & > :first-child > :first-child { color:var(--cm-ink-3); }
+    & > :last-child, & > :last-child * { margin:0 !important; }
+    & > :last-child div { height:auto !important; min-height:0 !important; }
+    & select { height:32px !important; min-height:0 !important; padding:0 32px 0 10px !important; font-size:13px !important; } }
+
+  & [data-cm-o=card] { border:1px solid var(--cm-line) !important; border-radius:4px; overflow:hidden; margin:0 0 12px !important; background:#fff;
+    & > * { border:0 !important; } }
+  & [data-cm-o=head] { display:flex !important; align-items:center; justify-content:space-between; gap:16px; padding:10px 16px !important; min-height:0 !important;
+    background:var(--cm-surface-2); border-bottom:1px solid var(--cm-line) !important; }
+  & [data-cm-o=meta] { display:flex !important; align-items:baseline; flex-wrap:wrap; gap:0 12px; width:auto !important;
+    & > * { margin:0 !important; font-size:13px !important; line-height:20px !important; }
+    & > h3 { width:auto !important; flex:none; font-size:14px !important; font-weight:600 !important; }
+    & > h3 > span { position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip-path:inset(50%); white-space:nowrap; } /* "Order Number …" for screen readers */
+    & [id^=orderDate_] { color:var(--cm-ink-3); }
+    & [id^=totalPrice_] { display:flex; gap:4px; & > * { font-size:13px !important; line-height:20px !important; } & > :first-child { color:var(--cm-ink-3); font-weight:400 !important; } & > :last-child { font-weight:600; } } }
+  & [data-cm-o=actions] { display:flex !important; align-items:center; gap:8px; width:auto !important;
+    & > * { margin:0 !important; width:auto !important; }
+    & a { display:inline-flex !important; align-items:center; height:28px !important; min-height:0 !important; width:auto !important; padding:0 12px !important; font-size:13px !important; border-radius:4px !important; }
+    & a[href*="/buyagain/"] { width:28px !important; padding:0 !important; justify-content:center; font-size:0 !important;
+      &::before { content:"\e1a0"; font-family:Phosphor; font-size:16px; line-height:1; } } } /* Buy Again, as in the header */
+
+  & [data-cm-o=statusbar] { display:flex !important; justify-content:space-between; align-items:center !important; height:auto !important; min-height:0 !important; padding:10px 16px 2px !important; margin:0 !important;
+    & > :first-child { display:inline-flex !important; align-items:center; height:20px !important; padding:0 8px !important; margin:0 !important; border-radius:999px; border:1px solid currentColor;
+      background:var(--cm-blue-tint); color:var(--cm-blue) !important;
+      & * { color:inherit !important; font-size:12px !important; line-height:18px !important; font-weight:600 !important; margin:0 !important; padding:0 !important; height:auto !important; } }
+    & > :last-child:not(:first-child) { margin-left:auto !important; }
+    & > :last-child:not(:first-child), & > :last-child:not(:first-child) * { width:auto !important; }
+    & a { height:auto !important; min-height:0 !important; width:auto !important; padding:0 !important; border:0 !important; background:none !important; font-size:13px !important; text-decoration:underline; } }
+  & [data-cm-o=statusbar][data-cm-state=cancelled] > :first-child { background:var(--cm-surface-2); color:var(--cm-ink-3) !important; }
+  & [data-cm-o=statusbar][data-cm-state=done] > :first-child { background:#EAF5EA; color:var(--cm-green) !important; }
+
+  & [data-cm-o=itemwrap] { padding:0 !important; }
+  & [data-cm-o=item] { display:flex !important; gap:12px; align-items:center; padding:8px 16px !important; width:auto !important; min-height:0 !important;
+    & div { margin:0 !important; }
+    & > :first-child { width:56px !important; height:56px !important; flex:none; & img { width:56px !important; height:56px !important; object-fit:contain; } }
+    & > :last-child { width:auto !important; min-height:0 !important; padding:0 !important; & > div:empty { display:none; } }
+    & a { font-size:14px !important; line-height:18px !important; }
+    /* "Room of Choice · Scheduled Delivery · Saturday, November 21" on one small line */
+    & > :last-child > div:last-child { display:flex; flex-wrap:wrap; gap:0 6px; margin-top:2px !important; color:var(--cm-ink-3);
+      & * { display:inline !important; font-size:12px !important; line-height:16px !important; }
+      & > div + div::before { content:"·"; margin-right:6px; }
+      & > div > div + div::before { content:" · "; } } }
+  & [data-cm-o=more] { height:auto !important; padding:4px 16px 10px !important; & a { font-size:13px !important; } }
+
+  & [data-cm-o=upsnote] { margin:0 0 8px !important; &, & * { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3); } }
+  & [data-cm-o=backtop] { height:auto !important; min-height:0 !important; padding:0 !important; margin:0 !important; border:0 !important;
+    & * { border:0 !important; height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important; }
+    & hr { display:none !important; }
+    & button { font-size:13px !important; } }
+}

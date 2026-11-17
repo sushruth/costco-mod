@@ -10,6 +10,7 @@ import { delivery } from './plugins/delivery';
 import { footer } from './plugins/footer';
 import { header } from './plugins/header';
 import { locator } from './plugins/locator';
+import { orders } from './plugins/orders';
 import { pairing } from './plugins/pairing';
 import { panel } from './plugins/panel';
 import { promos } from './plugins/promos';
@@ -19,7 +20,7 @@ import { services } from './plugins/services';
 import { settings } from './plugins/settings';
 
 // Order matters: pairing reorders items before the plugins that draw them.
-const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, search, deals, locator, checkout, footer, settings, redlines];
+const PLUGINS: Plugin[] = [pairing, cards, delivery, services, panel, promos, header, search, deals, locator, orders, checkout, footer, settings, redlines];
 
 declare const __CM_CSS__: string; // the bundled CSS, inlined by dev/build.ts
 
@@ -36,9 +37,9 @@ const isProduct = /^\/p\/|\.product\.\d+\.html/.test(location.pathname);
 const hasItems = !!$('#order-items') && !!$('#order-summary-column');
 const isCheckout = hasItems && /SinglePageCheckout/i.test(location.pathname);
 const isCart = hasItems && !isCheckout;
-// Off the cart, only the site header, search results, deal status, warehouse locator, checkout, footer and settings gear run, plus Redlines in the dev build.
+// Off the cart, only the site header, search results, deal status, warehouse locator, orders list, checkout, footer and settings gear run, plus Redlines in the dev build.
 // Checkout also gets the order review panel.
-const here = isCart ? active : active.filter((p) => [header, search, deals, locator, checkout, footer, settings, redlines, ...(isCheckout ? [panel] : [])].includes(p));
+const here = isCart ? active : active.filter((p) => [header, search, deals, locator, orders, checkout, footer, settings, redlines, ...(isCheckout ? [panel] : [])].includes(p));
 
 function setOn(on: boolean) {
   document.documentElement.classList.toggle('cm-on', on);

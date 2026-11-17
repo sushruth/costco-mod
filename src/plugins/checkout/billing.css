@@ -48,6 +48,9 @@
       & strong#balance-label::before { color:var(--cm-ink-3); font-weight:400; }
       & img { opacity:.5; filter:grayscale(1); }
       & #shop-card-block:is(*, :has(.shop-card-input:checked)) .a11y-check { opacity:.4; &::before { background:var(--cm-line-strong) !important; } &::after { transform:none !important; } } }
+    /* Costco hides the + while its add-card form is open; it stays, highlighted, and Cancel in the form closes it */
+    & #addShopCardContainer.hide { display:block !important; }
+    & #payment-method-shop-card:has(#addShopCardSubModuleContainer:not(.hide)) #addShopCard_ { background:var(--cm-surface-2); pointer-events:none; }
     & #addShopCardContainer { order:2; width:auto !important; float:none !important; padding:0 !important; margin:0 !important; }
     & #addShopCard_ { display:flex !important; align-items:center; justify-content:center; width:30px; height:28px; padding:0 2px 0 0 !important; float:none !important; font-size:0 !important;
       border:0; border-left:1px solid var(--cm-line); border-radius:0 999px 999px 0; color:var(--cm-blue) !important;

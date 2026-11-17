@@ -16,12 +16,14 @@
 
     /* wallet: a chip [Shop Card logo, balance, switch] and a + at the right of "Payment Methods". Costco keeps one
        Shop Card balance per member; its success line, errors and the add-card form drop down under the chip. */
-    & #payment-method-shop-card { grid-row:1; justify-self:end; align-self:start; position:relative; z-index:2; width:auto !important; margin:0 !important; padding:0 !important;
-      display:flex !important; align-items:center; gap:6px; }
+    /* ponytail: the chip leaves room for the Affirm pill (176px + 8px gap) at its left; both widths are fixed */
+    & #payment-method-shop-card { grid-row:1; justify-self:end; align-self:start; position:relative; z-index:2; width:auto !important; margin:0 184px 0 0 !important; padding:0 !important;
+      display:flex !important; align-items:center; height:30px; border:1px solid var(--cm-line); border-radius:999px; }
+    & #payment-method-shop-card:has(.shop-card-input:checked) { border-color:var(--cm-blue); }
     & #shop-card-text, & #dw-shop-card-error-container:empty { display:none !important; }
-    & #shop-card-block { position:relative; display:flex !important; align-items:center; height:30px; padding:0 8px 0 10px !important; margin:0 !important;
-      border:1px solid var(--cm-line) !important; border-radius:999px; cursor:pointer;
-      &:hover { border-color:var(--cm-line-strong) !important; }
+    & #shop-card-block { position:relative; display:flex !important; align-items:center; height:28px; padding:0 8px 0 10px !important; margin:0 !important;
+      border:0 !important; border-radius:999px 0 0 999px; cursor:pointer;
+      &:hover { background:var(--cm-surface-2); }
       & * { font-size:13px !important; line-height:18px !important; }
       /* Costco nests the logo and the balance in separate wrappers; flattened, they line up as logo, balance, switch */
       & .outline, & .outline > div, & .style-check-a11y, & form { display:contents !important; }
@@ -29,7 +31,7 @@
       & .shop-card-img { order:1; display:flex !important; align-items:center; width:auto !important; padding:0 !important; }
       & img { display:block; height:18px !important; width:auto !important; border-radius:2px; }
       /* "$0.00 available": min-content wraps "available" onto a second line, which the height clips */
-      & strong { order:2; display:block; width:min-content; height:18px; overflow:hidden; margin:0 0 0 6px !important; font-weight:600; }
+      & strong#balance-label { order:2; margin:0 0 0 6px !important; font-size:0 !important; &::before { content:attr(data-cm-bal); font-size:13px; line-height:18px; font-weight:600; } }
       /* the checkbox, invisible, covers the chip; its drawn box becomes a switch at the chip's right end */
       & .shop-card-input { position:absolute !important; inset:0; width:100% !important; height:100% !important; margin:0 !important; opacity:0; cursor:pointer; z-index:1; }
       & .a11y-check { position:relative !important; order:3; flex:none; width:26px; height:16px; margin:0 0 0 8px !important; }
@@ -38,25 +40,27 @@
       & .a11y-check::after { content:"" !important; position:absolute !important; top:2px !important; left:2px !important; margin:0 !important; width:12px !important; height:12px !important;
         border:0 !important; border-radius:50% !important; background:#fff !important; transform:none !important; transition:transform .15s; display:block !important; }
       & .shop-card-input:focus-visible ~ .a11y-check::before { outline:2px solid var(--cm-blue); outline-offset:2px; } }
-    & #shop-card-block:has(.shop-card-input:checked) { border-color:var(--cm-blue) !important;
+    & #shop-card-block:has(.shop-card-input:checked) {
       & .a11y-check::before { background:var(--cm-blue) !important; } & .a11y-check::after { transform:translateX(10px) !important; } }
     & #addShopCardContainer { order:2; width:auto !important; float:none !important; padding:0 !important; margin:0 !important; }
-    & #addShopCard_ { display:flex !important; align-items:center; justify-content:center; width:30px; height:30px; padding:0 !important; float:none !important; font-size:0 !important;
-      border:1px solid var(--cm-line); border-radius:50%; color:var(--cm-blue) !important;
+    & #addShopCard_ { display:flex !important; align-items:center; justify-content:center; width:30px; height:28px; padding:0 2px 0 0 !important; float:none !important; font-size:0 !important;
+      border:0; border-left:1px solid var(--cm-line); border-radius:0 999px 999px 0; color:var(--cm-blue) !important;
       &::before { content:"\e3d4"; font-family:Phosphor; font-size:16px; line-height:1; } /* plus */
-      &:hover { border-color:var(--cm-blue); } }
+      &:hover { background:var(--cm-surface-2); } }
     & :is(#checkout-success-shop-card-container, #dw-shop-card-error-container, #addShopCardSubModuleContainer) {
       position:absolute; right:0; top:calc(100% + 6px); z-index:5; width:320px !important; max-width:90vw; float:none !important; margin:0 !important;
       background:#fff; border:1px solid var(--cm-line); border-radius:4px; box-shadow:0 8px 24px rgb(0 0 0 / .12); }
     & :is(#checkout-success-shop-card-container, #dw-shop-card-error-container) { padding:6px 10px !important; font-size:12px !important; line-height:16px; }
     & #addShopCardSubModuleContainer { padding:12px !important; & [class*="col-"], & #addshopcard-module, & form, & input { width:100% !important; float:none !important; } }
-    & #credit-card-block-review { margin-bottom:6px !important; }
+    & #credit-card-block-review { margin:0 !important; }
+    /* the saved card and Click to Pay side by side */
+    & #payment-method-radio-buttons fieldset { display:flex; align-items:center; flex-wrap:wrap; gap:6px 24px; margin:0 !important; }
     /* card box: radio, logo and card details on one line, Click to Pay under it */
     & .card-container { display:flex; align-items:center; gap:10px; }
     & .card-image { width:auto !important; flex:none; margin:0 !important; padding:0 !important; }
     & .card-information { font-size:13px !important; line-height:18px !important; margin:0 !important; padding:0 !important; }
     & .card-image img { height:16px !important; width:auto !important; }
-    & #radio-clickpay-ada-handler { margin:6px 0 0 !important; }
+    & #radio-clickpay-ada-handler { margin:0 !important; }
     & .control--radio { display:flex !important; align-items:center; min-height:24px; }
     & .control--radio .control__indicator { top:50% !important; margin:-8px 0 0 !important; }
     & #clickpay-image-display { height:24px !important; width:auto !important; padding:0 !important; margin:0 !important; }
@@ -69,11 +73,11 @@
     & #payment-address-form h3 { margin:0 0 2px !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; }
     & #payment-address-form .address-display { padding:0 !important; margin:0 !important; }
     & #address-block-billing { padding-left:0 !important; & .bill-address-title { padding:0 !important; } }
-    /* Affirm: a small pill on the "Credit or Debit Card" heading row; the "or" divider and its small print go */
-    & > .row > .col-xs-12:has(.cc-border) { position:relative; }
-    & .cc-border, & #payment-method-affirm { position:static !important; }
+    /* Affirm: a pill beside the wallet chip on the title row; the "or" divider and its small print go */
+    & > .row { position:relative; }
+    & > .row > .col-xs-12:has(.cc-border), & .cc-border, & #payment-method-affirm { position:static !important; }
     & #payment-method-affirm :is(.hr-div, .affirm-as-low-as, .affirm-info-text) { display:none !important; }
     & .affirm-lite-container { position:static !important; }
-    & #affirm-pay { position:absolute !important; right:0; bottom:calc(100% + 6px); height:26px !important; width:auto !important; padding:0 12px !important; font-size:12px !important; border-width:1px !important; border-radius:999px !important; white-space:nowrap; }
+    & #affirm-pay { position:absolute !important; right:0; top:0; height:30px !important; width:176px !important; padding:0 12px !important; font-size:12px !important; border-width:1px !important; border-radius:999px !important; white-space:nowrap; }
   }
 }

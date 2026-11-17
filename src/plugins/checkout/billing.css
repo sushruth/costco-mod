@@ -91,5 +91,27 @@
     & #payment-method-affirm :is(.hr-div, .affirm-as-low-as, .affirm-info-text) { display:none !important; }
     & .affirm-lite-container { position:static !important; }
     & #affirm-pay { position:absolute !important; right:0; top:0; height:30px !important; width:176px !important; padding:0 12px !important; font-size:12px !important; border-width:1px !important; border-radius:999px !important; white-space:nowrap; }
+
+    /* entering a card: name and "save as default" on one row, then number, expiry and CVV on the next; 12px grey labels, 32px fields */
+    & #credit-card-block { margin:0 !important; }
+    & #radio-credit-card-ada-handler label { font-size:13px !important; line-height:18px !important; }
+    & #payment-method-payment-options:has(#CheckoutPaymentForm) { margin-top:10px !important; padding-top:10px !important; border-top:1px solid var(--cm-line); }
+    & #cc-payment-block { margin:0 !important; }
+    & #CheckoutPaymentForm { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px 16px; align-items:end; margin:0 !important;
+      &::before, &::after, & .row::before, & .row::after { display:none !important; } /* Bootstrap's clearfix would take grid cells */
+      & .row, & [class*="col-"], & .form-group { width:auto !important; float:none !important; margin:0 !important; padding:0 !important; min-height:0 !important; }
+      & > .row:has(#cc_nameoncard) { grid-column:1; grid-row:1; }
+      & > .row:has(#save_CC) { grid-column:2; grid-row:1; align-self:center; padding-top:20px !important;
+        & .style-check-a11y { position:relative; display:block !important; } & label { padding-left:22px !important; } & label, & label * { font-size:13px !important; color:var(--cm-ink) !important; margin:0 !important; }
+        & input { position:absolute !important; left:0; top:50%; margin:-7px 0 0 !important; } & .a11y-check::before { top:50% !important; margin-top:-9px !important; } }
+      & > .row-for-credit-card-details { grid-column:1 / -1; grid-row:2; display:grid !important; grid-template-columns:minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap:0 12px; align-items:start; }
+      & > .row-for-credit-card-details > div:not(.col-xs-12) { display:contents; }
+      & label { display:block; margin:0 0 4px !important; font-size:12px !important; line-height:16px !important; font-weight:400 !important; color:var(--cm-ink-3) !important; }
+      & .row:has(> [class*="col-"] > label[for=account]) { display:flex !important; align-items:center; justify-content:space-between; margin:0 0 4px !important; & label { margin:0 !important; } }
+      & #paymethod-icons { display:flex; gap:4px; justify-content:flex-end; & img { height:14px !important; width:auto !important; float:none !important; } }
+      & :is(input.form-control, #cc_cvc) { height:32px !important; min-height:0 !important; padding:0 10px !important; font-size:13px !important; line-height:30px !important; border-radius:4px !important; }
+      & #cc_cvc { padding:0 !important; }
+      & .error { font-size:12px !important; line-height:16px !important; margin:4px 0 0 !important; }
+      & #cc-informational-text { font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3); margin:2px 0 0 !important; } }
   }
 }

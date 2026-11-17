@@ -8,14 +8,15 @@ const W = 1240, H = 700;
 // [shot, crop x, y, w, h in the 1440px shot, scale, left, top, tilt°] — listed back to front.
 // ponytail: hand-placed; if a shot's layout moves, its crop rectangle needs a new look.
 const pieces: [string, number, number, number, number, number, number, number, number][] = [
-  ['search', 270, 200, 700, 370, 0.78, 30, 64, -1.5], // result tiles: badges, price per unit, cart icon
-  ['deals', 20, 350, 700, 400, 0.62, 560, 18, 1.2], // savings cards in the same tile style
-  ['cart', 964, 144, 440, 400, 0.7, 930, 250, -0.8], // order review panel
-  ['locator', 14, 352, 470, 156, 0.8, 18, 360, 1], // warehouse hours, Executive hour and gas on one line
-  ['cart', 24, 236, 910, 260, 0.62, 330, 300, 0.6], // compact cart cards
-  ['product', 844, 406, 572, 236, 0.68, 760, 120, -1.2], // promo end date under the price
-  ['checkout', 6, 318, 1030, 252, 0.6, 80, 500, -0.6], // wallet chip, Affirm pill and card box
-  ['search', 0, 0, 1440, 88, 0.62, 300, 610, 0.4], // two-row header
+  ['search', 270, 200, 700, 370, 0.7, 24, 40, -1.5], // result tiles: badges, price per unit, cart icon
+  ['deals', 20, 350, 700, 400, 0.55, 590, 14, 1.2], // savings cards in the same tile style
+  ['cart', 964, 144, 440, 400, 0.55, 978, 296, -0.8], // order review panel
+  ['orders', 310, 302, 1100, 337, 0.56, 20, 318, 0.8], // orders list: one-line head, status pill, compact items
+  ['product', 844, 406, 572, 236, 0.6, 880, 150, -1.2], // promo end date under the price
+  ['orderdetails', 335, 140, 1076, 300, 0.6, 470, 250, -0.6], // order details: status chip, date chips, item rows
+  ['cart', 24, 236, 910, 260, 0.55, 300, 470, 0.6], // compact cart cards
+  ['checkout', 6, 318, 1030, 252, 0.52, 700, 520, -0.6], // wallet chip, Affirm pill and card box
+  ['search', 0, 0, 1440, 88, 0.55, 60, 630, 0.4], // two-row header
 ];
 
 const piece = ([shot, x, y, w, h, s, left, top, tilt]: (typeof pieces)[number]) =>

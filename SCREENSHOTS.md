@@ -1,6 +1,6 @@
 # Before and after
 
-Costco's own pages are on the left, and the same pages with the userscript are on the right. Each pair was taken at 1440px wide, except the phone pair at 390px. The warehouse, ZIP code, address, card, membership number and the cart's prices and discounts are blurred.
+Costco's own pages are on the left, and the same pages with the userscript are on the right. Each pair was taken at 1440px wide, except the phone pair at 390px. The warehouse, ZIP code, name, address, card, membership and order numbers, and prices and discounts are blurred.
 
 ## Home
 
@@ -59,6 +59,22 @@ Each warehouse shows today's hours, the Executive member start time and the gas 
 | Before | After |
 | --- | --- |
 | <img src="docs/compare/cart-before.png" alt="Cart before" width="440"> | <img src="docs/compare/cart-after.png" alt="Cart after" width="440"> |
+
+## Orders
+
+Each order is a light card with a one-line head: number, date and total, then View Order and Buy Again as an icon. The status is a pill, and each item takes one row with its delivery on one small line.
+
+| Before | After |
+| --- | --- |
+| <img src="docs/compare/orders-before.png" alt="Orders and Purchases before" width="440"> | <img src="docs/compare/orders-after.png" alt="Orders and Purchases after" width="440"> |
+
+## Order details
+
+The title row carries the order status as a chip, with Order Summary, Buy Again and Print as icons. Each delivery opens with a date chip, and each item fits one row with its actions beside the price. Only the services' second-appointment notice stays.
+
+| Before | After |
+| --- | --- |
+| <img src="docs/compare/orderdetails-before.png" alt="Order details before" width="440"> | <img src="docs/compare/orderdetails-after.png" alt="Order details after" width="440"> |
 
 ## Checkout
 

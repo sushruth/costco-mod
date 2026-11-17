@@ -62,6 +62,8 @@ Each warehouse shows today's hours, the Executive member start time and the gas 
 
 ## Checkout
 
+The Shop Card wallet is a chip beside a small Affirm button, the saved card fits one line, and the billing address sits beside it.
+
 | Before | After |
 | --- | --- |
 | <img src="docs/compare/checkout-before.png" alt="Checkout before" width="440"> | <img src="docs/compare/checkout-after.png" alt="Checkout after" width="440"> |

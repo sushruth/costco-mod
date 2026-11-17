@@ -1,22 +1,33 @@
-// Builds docs/hero.png, the README's top image, from the "after" shots in docs/compare.
-// Run with `bun run hero`; the pre-commit hook in .githooks runs it when docs/compare changes.
+// Builds docs/hero.png, the README's top image: crops of the parts the script improves, cut from the "after" shots
+// in docs/compare and layered loosely with overlap. Run with `bun run hero`; the pre-commit hook runs it when docs/compare changes.
 import { $ } from 'bun';
 
 const root = new URL('..', import.meta.url).pathname;
-// Back to front; the phone sits in front at the right.
-const desk = ['home', 'search', 'deals', 'product', 'cart'];
-const W = 1240, H = 700, w = 700, step = 92, drop = 34;
+const W = 1240, H = 700;
 
-const layer = (name: string, i: number) =>
-  `<img src="/docs/compare/${name}-after.png" style="left:${i * step}px; top:${i * drop}px; width:${w}px; height:${(w * 1000) / 1440}px">`;
+// [shot, crop x, y, w, h in the 1440px shot, scale, left, top, tilt°] — listed back to front.
+// ponytail: hand-placed; if a shot's layout moves, its crop rectangle needs a new look.
+const pieces: [string, number, number, number, number, number, number, number, number][] = [
+  ['search', 270, 200, 700, 370, 0.78, 30, 64, -1.5], // result tiles: badges, price per unit, cart icon
+  ['deals', 20, 350, 700, 400, 0.62, 560, 18, 1.2], // savings cards in the same tile style
+  ['cart', 964, 144, 440, 400, 0.7, 930, 250, -0.8], // order review panel
+  ['locator', 14, 352, 470, 156, 0.8, 18, 360, 1], // warehouse hours, Executive hour and gas on one line
+  ['cart', 24, 236, 910, 260, 0.62, 330, 300, 0.6], // compact cart cards
+  ['product', 844, 406, 572, 236, 0.68, 760, 120, -1.2], // promo end date under the price
+  ['checkout', 6, 318, 1030, 252, 0.6, 80, 500, -0.6], // wallet chip, Affirm pill and card box
+  ['search', 0, 0, 1440, 88, 0.62, 300, 610, 0.4], // two-row header
+];
+
+const piece = ([shot, x, y, w, h, s, left, top, tilt]: (typeof pieces)[number]) =>
+  `<div class="p" style="left:${left}px; top:${top}px; width:${w * s}px; height:${h * s}px; transform:rotate(${tilt}deg)">` +
+  `<img src="/docs/compare/${shot}-after.png" style="width:${1440 * s}px; margin:${-y * s}px 0 0 ${-x * s}px"></div>`;
 const html = `<!doctype html><meta charset="utf-8"><style>
   html, body { margin:0; background:transparent; }
   .c { position:relative; width:${W}px; height:${H}px; }
-  img { position:absolute; display:block; object-fit:cover; object-position:top; border-radius:8px;
-    box-shadow:0 2px 6px rgb(51 65 85 / .14), 0 12px 32px rgb(51 65 85 / .16); }
-</style><div class="c">${desk.map(layer).join('')}
-  <img src="/docs/compare/phone-after.png" style="right:8px; top:60px; width:290px; height:628px; border-radius:22px">
-</div>`;
+  .p { position:absolute; overflow:hidden; border-radius:8px; background:#fff;
+    box-shadow:0 0 0 1px rgb(51 65 85 / .08), 0 2px 6px rgb(51 65 85 / .14), 0 12px 32px rgb(51 65 85 / .18); }
+  .p img { display:block; }
+</style><div class="c">${pieces.map(piece).join('')}</div>`;
 
 const server = Bun.serve({
   port: 0,

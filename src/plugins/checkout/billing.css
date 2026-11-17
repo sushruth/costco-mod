@@ -95,7 +95,7 @@
     /* entering a card: name and "save as default" on one row, then number, expiry and CVV on the next; 12px grey labels, 32px fields */
     & #credit-card-block { margin:0 !important; }
     & #radio-credit-card-ada-handler label { font-size:13px !important; line-height:18px !important; }
-    & #payment-method-payment-options:has(#CheckoutPaymentForm) { margin-top:10px !important; padding-top:10px !important; border-top:1px solid var(--cm-line); }
+    & #payment-method-payment-options:has(#cc-payment-block:not(.hide)) { margin-top:10px !important; padding-top:10px !important; border-top:1px solid var(--cm-line); }
     & #cc-payment-block { margin:0 !important; }
     & #CheckoutPaymentForm { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px 16px; align-items:end; margin:0 !important;
       &::before, &::after, & .row::before, & .row::after { display:none !important; } /* Bootstrap's clearfix would take grid cells */

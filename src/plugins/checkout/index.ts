@@ -13,7 +13,12 @@ export const checkout: Plugin = {
   setup: () => {
     const b = $('#balance-label');
     if (!b) return;
-    const sync = () => { b.dataset.cmBal = (b.textContent ?? '').trim().split(/\s+/)[0]; };
+    // A $0 wallet reads as disabled: Costco still lets it be switched on, but it pays nothing.
+    const sync = () => {
+      const bal = (b.textContent ?? '').trim().split(/\s+/)[0];
+      b.dataset.cmBal = bal;
+      b.closest('#payment-method-shop-card')?.toggleAttribute('data-cm-empty', !/[1-9]/.test(bal));
+    };
     sync();
     new MutationObserver(sync).observe(b, { childList: true, characterData: true, subtree: true });
   },

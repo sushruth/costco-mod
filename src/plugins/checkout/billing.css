@@ -31,7 +31,7 @@
       & .shop-card-img { order:1; display:flex !important; align-items:center; width:auto !important; padding:0 !important; }
       & img { display:block; height:18px !important; width:auto !important; border-radius:2px; }
       /* "$0.00 available": min-content wraps "available" onto a second line, which the height clips */
-      & strong#balance-label { order:2; margin:0 0 0 6px !important; font-size:0 !important; &::before { content:attr(data-cm-bal); font-size:13px; line-height:18px; font-weight:600; } }
+      & strong#balance-label { order:2; display:flex !important; align-items:center; height:28px; margin:0 0 0 6px !important; font-size:0 !important; &::before { content:attr(data-cm-bal); font-size:13px; line-height:18px; font-weight:600; } }
       /* the checkbox, invisible, covers the chip; its drawn box becomes a switch at the chip's right end */
       & .shop-card-input { position:absolute !important; inset:0; width:100% !important; height:100% !important; margin:0 !important; opacity:0; cursor:pointer; z-index:1; }
       & .a11y-check { position:relative !important; order:3; flex:none; width:26px; height:16px; margin:0 0 0 8px !important; }
@@ -42,6 +42,12 @@
       & .shop-card-input:focus-visible ~ .a11y-check::before { outline:2px solid var(--cm-blue); outline-offset:2px; } }
     & #shop-card-block:has(.shop-card-input:checked) {
       & .a11y-check::before { background:var(--cm-blue) !important; } & .a11y-check::after { transform:translateX(10px) !important; } }
+    /* :is(*, :has(…)) matches the "on" rules' weight, so an empty wallet stays grey even when Costco has it switched on */
+    & #payment-method-shop-card[data-cm-empty]:is(*, :has(.shop-card-input:checked)) { border-color:var(--cm-line);
+      & #shop-card-block:is(*, :has(.shop-card-input:checked)) { cursor:default; &:hover { background:none; } }
+      & strong#balance-label::before { color:var(--cm-ink-3); font-weight:400; }
+      & img { opacity:.5; filter:grayscale(1); }
+      & #shop-card-block:is(*, :has(.shop-card-input:checked)) .a11y-check { opacity:.4; &::before { background:var(--cm-line-strong) !important; } &::after { transform:none !important; } } }
     & #addShopCardContainer { order:2; width:auto !important; float:none !important; padding:0 !important; margin:0 !important; }
     & #addShopCard_ { display:flex !important; align-items:center; justify-content:center; width:30px; height:28px; padding:0 2px 0 0 !important; float:none !important; font-size:0 !important;
       border:0; border-left:1px solid var(--cm-line); border-radius:0 999px 999px 0; color:var(--cm-blue) !important;

@@ -37,16 +37,15 @@
     & .contact-information { margin:0 0 8px !important; }
     & .contact-information label { font-size:13px !important; line-height:18px !important; font-weight:600; margin:0 !important; color:var(--cm-ink); }
     & #sms-notification-wrapper label, & #sms-notification-wrapper p, & #sms-notification-wrapper span { font-size:12px !important; line-height:16px !important; }
-    /* text updates: title and phone on one line; the consent and the how-to-opt-out line show one line each and open on hover or focus */
-    & #edit-contact-information-phone { display:grid !important; grid-template-columns:minmax(0, 1fr) 200px; column-gap:16px; align-items:center; padding:0 !important;
+    /* text updates: the title, the consent beside its checkbox, then the phone field with the opt-out note beside it */
+    & #edit-contact-information-phone { display:grid !important; grid-template-columns:200px minmax(0, 1fr); gap:6px 12px; align-items:center; padding:0 !important;
       & > .row { margin:0 !important; width:auto !important; }
-      & > .contact-information { grid-column:1; grid-row:1; & label { padding:0 !important; } }
-      & > .row:has(#smsOptInNotification) { grid-column:2; grid-row:1; & .form-group { width:auto !important; padding:0 !important; float:none !important; } }
-      & > .row:has(.sms-optin-notification), & > .row:has(#sms-agreement-info) { grid-column:1 / -1; margin-top:6px !important; }
-      & :is(.sms-checkbox-optin, #sms-agreement-info) { display:-webkit-box !important; -webkit-box-orient:vertical; -webkit-line-clamp:1; overflow:hidden; }
-      & .row:is(:hover, :focus-within) :is(.sms-checkbox-optin, #sms-agreement-info) { -webkit-line-clamp:unset; }
+      & > .contact-information { grid-column:1 / -1; grid-row:1; & label { padding:0 !important; } }
+      & > .row:has(.sms-optin-notification) { grid-column:1 / -1; grid-row:2; }
+      & > .row:has(#smsOptInNotification) { grid-column:1; grid-row:3; & .form-group { width:auto !important; padding:0 !important; float:none !important; } }
+      & > .row:has(#sms-agreement-info) { grid-column:2; grid-row:3; & * { padding:0 !important; margin:0 !important; } }
       & .style-check-a11y:has(.sms-optin-notification) { display:flex; align-items:flex-start; gap:8px; & input { position:static !important; flex:none; margin:1px 0 0 !important; } & label { flex:1; min-width:0; margin:0 !important; padding:0 !important; } } }
-    & #smsOptInNotification { position:relative !important; margin:0 !important; height:30px !important; min-height:0 !important;
+    & #smsOptInNotification { position:relative !important; top:0 !important; margin:0 !important; height:30px !important; min-height:0 !important;
       & input { height:30px !important; min-height:0 !important; padding:0 28px 0 8px !important; font-size:13px !important; }
       & label { position:absolute !important; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); } /* the input has its own aria-label */
       & #optinError { position:absolute !important; right:8px; top:50% !important; transform:translateY(-50%); margin:0 !important; } }

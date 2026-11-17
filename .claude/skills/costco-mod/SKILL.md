@@ -16,19 +16,7 @@ The costco-mod userscript restyles costco.com in place. The owner steers by reac
 
 ## Design taste
 
-- Tight, information-dense, visually light. Any gap that isn't separating two things ("less than an alphabet-sized gap") should go. Then check the result isn't crowded; the owner will say "congested" if it is.
-- Honor Costco's design language: 4px radius, Costco blue `#005DAB`, regular-weight titles, `|` separators, 12px grey meta. Use the cart as the reference style for every other page.
-- Fewer boxes. Ask what earns a border, a background or a shadow. Remove double borders and heavy shadows.
-- No left indents to show relationships. Show grouping with a shared outline or a split section instead.
-- Iconize text where an icon is clear: Phosphor icons, with a `title` and `aria-label` carrying the old text. Prices, dates and counts stay text.
-- One primary button per view. Other actions are ghost or icon buttons that show emphasis on hover.
-- Prices get a fixed, predictable spot (bottom-left or right edge), never mixed into running text.
-- No redundant info: drop repeated notes, a price that equals the total at quantity 1, labels that repeat what's beside them.
-- Text must make sense on its own ("what dates?"). Handle N options and N items, not just the two on screen.
-- Mobile has no hover. Anything shown only on hover needs a tap or always-visible substitute below 1024px.
-- Pill badges: plain `border-radius`, no clip-path, slight border, line-height fixed so text sits centered.
-- Avoid hard-coded word lists and name heuristics. Derive from the page data, or drop the feature.
-- Prefer simple: CSS before JS, Costco's own data before guesses. When asked "is this overengineering?", cut.
+Follow `DESIGN.md` at the repo root. Read it before any design change, and add to it when the owner corrects a look.
 
 ## Workflow
 

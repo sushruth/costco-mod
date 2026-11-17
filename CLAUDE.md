@@ -8,6 +8,10 @@ A Violentmonkey userscript (`costco-cart.user.js`) that restyles costco.com in p
 - **Restyle in place.** Costco's DOM and handlers stay intact; the script adds classes, CSS and small extra nodes.
 - **Honor Costco's design language.** 4px radius cards, Costco's card shadow, regular-weight titles, `|` separators, slanted badges.
 
+## Design
+
+`DESIGN.md` holds the design rules: spacing, grouping, alignment, controls, text, badges and Costco's look.
+
 ## Architecture
 
 - `src/` is the source; `costco-cart.user.js` is the build output, committed so the raw GitHub URL installs and updates. Never edit the output by hand.

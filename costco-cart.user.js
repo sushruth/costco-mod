@@ -659,7 +659,7 @@
     for (const it of items)
       if (!it.parent) {
         out.push(it);
-        const kid = it.autoadd && items.find((k) => +k.orderItemId === +it.orderItemId + 1);
+        const kid = it.autoadd && items.find((k) => k.email && !k.parent && +k.orderItemId > +it.orderItemId);
         if (kid) {
           kid.parent = it;
           out.push(kid);

@@ -28,11 +28,17 @@
     border-radius:999px; background:var(--cm-blue) !important; color:#fff !important; font-size:13px !important; line-height:18px !important; font-weight:600 !important; white-space:nowrap;
     &::before { content:"\e184"; font-family:Phosphor; font-size:15px; font-weight:400; line-height:1; } } /* check-circle */
   & [data-cm-od=status][data-cm-st=cancelled] { background:var(--cm-ink-3) !important; &::before { content:"\e4f8"; } } /* x-circle */
-  /* "Scheduled Delivery Saturday, November 21 · Room of Choice: Free · Shipping Terms" */
-  & [data-cm-od=ship0] { display:inline-flex !important; gap:4px; align-items:baseline; margin:0 !important; min-height:0 !important; height:auto !important;
-    &, & > * { font-size:12px !important; line-height:16px !important; margin:0 !important; } }
-  & [data-cm-od=shipx] { display:inline-flex !important; vertical-align:baseline; margin:0 !important; padding:0 !important; height:auto !important; min-height:0 !important;
-    font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3);
+  /* each shipment's line: a date chip (truck) or a grey email chip, then "Room of Choice: Free · Shipping Terms", all on one 22px line */
+  & :is([data-cm-od=ship0], [data-cm-od=shipx]) { display:inline-flex !important; align-items:center !important; vertical-align:middle !important; height:22px !important; min-height:0 !important;
+    margin:0 !important; padding-top:0 !important; padding-bottom:0 !important; font-size:12px !important; line-height:16px !important; }
+  & [data-cm-od=ship0] > * { font-size:12px !important; line-height:16px !important; margin:0 !important; }
+  & [data-cm-od=ship0]:has(> *) {
+    & > :first-child { display:none !important; } /* "Scheduled Delivery", the same on every shipment */
+    & > :last-child { display:inline-flex !important; align-items:center; gap:6px; height:22px; padding:0 10px 0 8px !important; border-radius:999px; background:#EAF5EA; color:var(--cm-green) !important; font-weight:600 !important;
+      &::before { content:"\e4b4"; font-family:Phosphor; font-size:14px; font-weight:400; line-height:1; } } } /* truck */
+  & [data-cm-od=ship0]:not(:has(> *)) { gap:6px; padding:0 10px 0 8px !important; border-radius:999px; background:var(--cm-surface-2); color:var(--cm-ink-2) !important;
+    &::before { content:"\e218"; font-family:Phosphor; font-size:14px; line-height:1; } } /* envelope: email delivery */
+  & [data-cm-od=shipx] { padding:0 !important; color:var(--cm-ink-3);
     &::before { content:"·"; margin:0 6px; color:var(--cm-ink-3); } }
   & button[data-cm-od=shipx] { color:var(--cm-blue) !important; text-transform:none !important; min-width:0 !important; }
 

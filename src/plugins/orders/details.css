@@ -43,26 +43,29 @@
   & button[data-cm-od=shipx] { color:var(--cm-blue) !important; text-transform:none !important; min-width:0 !important; }
 
   /* one item: photo | title across the row, then "Item · price · Quantity" with the actions at the right, then fees and the notice */
-  & [data-cm-od=item] { display:grid !important; grid-template-columns:64px max-content max-content max-content minmax(0, 1fr) auto; gap:0; align-items:center !important; margin:8px 0 0 !important; height:auto !important;
+  & [data-cm-od=item] { min-height:64px; display:grid !important; grid-template-columns:64px max-content max-content max-content minmax(0, 1fr) auto; gap:0; align-items:center !important; margin:8px 0 0 !important; height:auto !important;
     & :is([data-cm-wrap="1"], [data-cm-od=col]) { display:contents !important; }
     & :is([data-cm-wrap="1"], [data-cm-od=col]) > :not([data-cm-od]):not([data-cm-wrap]) { display:none !important; }
     & * { margin-top:0 !important; margin-bottom:0 !important; }
     & a { font-size:14px !important; line-height:18px !important; }
     & :is(.MuiTypography-t5, .MuiTypography-t6) { font-size:12px !important; line-height:16px !important; }
-    & [data-cm-od=img] { grid-column:1; grid-row:1 / span 2; align-self:start; width:64px !important; height:64px !important; min-width:0 !important;
+    /* the photo hangs from the top without setting row heights; the item keeps 64px for it */
+    & [data-cm-od=img] { grid-column:1; grid-row:1 / span 2; align-self:start; width:64px !important; height:64px !important; min-width:0 !important; margin-bottom:-64px !important;
       & img { width:64px !important; height:64px !important; object-fit:contain; } }
     & :is([data-cm-od=title], [data-cm-od=itemno], [data-cm-od=fees], [data-cm-od=services]) { margin-left:16px !important; }
     & [data-cm-od=title] { grid-column:2 / -1; grid-row:1; }
     & [data-cm-od=itemno] { grid-column:2; grid-row:2; color:var(--cm-ink-3); & * { color:inherit; } }
     & [data-cm-od=price] { grid-column:3; grid-row:2; &, & * { font-weight:600 !important; color:var(--cm-ink) !important; } }
-    & [data-cm-od=qty] { grid-column:4; grid-row:2; display:inline-flex !important; & > :last-child { display:none !important; } } /* the "Total" label */
+    & [data-cm-od=qty] { grid-column:4; grid-row:2; display:inline-flex !important; align-items:center; & > :last-child { display:none !important; } } /* the "Total" label */
+    & :is([data-cm-od=itemno], [data-cm-od=price], [data-cm-od=qty], [data-cm-od=fees]), & :is([data-cm-od=qty], [data-cm-od=fees]) * { font-size:12px !important; line-height:16px !important; }
     & [data-cm-od=total] { grid-column:5; grid-row:2; & * { font-weight:600 !important; } &::before { content:"· Total"; font-weight:400; margin:0 4px 0 6px; } }
     & :is([data-cm-od=price], [data-cm-od=qty])::before { content:"·"; margin:0 6px; color:var(--cm-ink-3); }
+    & [data-cm-od=price]::before { margin-left:2px; } /* Costco's item number ends in a space */
     & [data-cm-od=actions] { grid-column:6; grid-row:2; }
     /* "CA EWST FEE 35+ · $6.00" */
     & [data-cm-od=fees] { grid-column:2 / 6; grid-row:3; margin-top:2px !important;
       & > div { display:flex !important; gap:0 6px; align-items:baseline; } & > div > div:nth-child(n+3) { display:none !important; }
-      & > div > * { display:block !important; color:var(--cm-ink-3); } & > div > * + *::before { content:"· "; } }
+      & > div > * { display:block !important; color:var(--cm-ink-3); } & > div > * + *::before { content:"·"; margin-right:6px; } }
     & [data-cm-od=services] { grid-column:1 / -1; grid-row:4; margin-left:0 !important; } }
   & [data-cm-od=col][data-cm-q1="1"] [data-cm-od=total] { display:none !important; }
 

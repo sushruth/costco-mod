@@ -1,0 +1,67 @@
+/* Order Details: each shipment is one small delivery line, then the item (photo, title, "Item · price · qty")
+   with its actions at the bottom right, and only the services' "second appointment" notice. */
+:root.cm-on.cm-p-orders {
+  & [data-cm-od=summary] { border-radius:4px !important; border-color:var(--cm-line) !important;
+    & > * { min-height:0 !important; } & [role=button] { min-height:0 !important; padding:0 16px !important; }
+    & [class*=AccordionSummary-content] { margin:10px 0 !important; }
+    & :is(h2, h3) { font-size:14px !important; line-height:20px !important; } }
+  & [data-cm-od=buyall] { display:flex !important; align-items:center; justify-content:flex-end; gap:12px; border:0 !important; padding:0 !important; margin:12px 0 !important;
+    min-height:0 !important; height:auto !important; background:transparent !important;
+    & > :first-child { font-size:13px !important; line-height:18px !important; color:var(--cm-ink-3); height:auto !important; }
+    & a { display:inline-flex !important; align-items:center; height:28px !important; min-height:0 !important; width:auto !important; padding:0 12px !important; font-size:13px !important;
+      background:#fff !important; color:var(--cm-blue) !important; border:1px solid var(--cm-blue) !important; border-radius:4px !important; } }
+  & [data-cm-od=card] { border:1px solid var(--cm-line) !important; border-radius:4px; padding:12px 16px !important;
+    & hr { border-color:var(--cm-line) !important; margin:12px 0 !important; } }
+  & [data-cm-od=statuswrap] { padding:0 !important; margin:0 !important; }
+  & [data-cm-od=status] { display:inline-flex !important; align-items:center; width:fit-content !important; height:20px; padding:0 8px !important; border-radius:999px; border:1px solid currentColor;
+    background:var(--cm-blue-tint); color:var(--cm-blue) !important; font-size:12px !important; line-height:18px !important; font-weight:600 !important; }
+  & [data-cm-od=status][data-cm-st=cancelled] { background:var(--cm-surface-2); color:var(--cm-ink-3) !important; }
+
+  /* "Scheduled Delivery Saturday, November 21 · Room of Choice: Free · Shipping Terms" */
+  & [data-cm-od=ship0] { display:inline-flex !important; gap:4px; align-items:baseline; margin:0 !important; min-height:0 !important; height:auto !important;
+    &, & > * { font-size:12px !important; line-height:16px !important; margin:0 !important; } }
+  & [data-cm-od=shipx] { display:inline-flex !important; vertical-align:baseline; margin:0 !important; padding:0 !important; height:auto !important; min-height:0 !important;
+    font-size:12px !important; line-height:16px !important; color:var(--cm-ink-3);
+    &::before { content:"·"; margin:0 6px; color:var(--cm-ink-3); } }
+  & button[data-cm-od=shipx] { color:var(--cm-blue) !important; text-transform:none !important; min-width:0 !important; }
+
+  & [data-cm-od=item] { display:flex !important; align-items:flex-end !important; gap:16px; margin:8px 0 0 !important; height:auto !important; }
+  & [data-cm-od=info] { flex:1 1 0 !important; min-width:0; width:auto !important; max-width:none !important;
+    & > *, & > * > *, & > * > * > * { width:auto !important; max-width:none !important; }
+    & * { margin-top:0 !important; margin-bottom:0 !important; }
+    & img { width:64px !important; height:64px !important; object-fit:contain; }
+    & a { font-size:14px !important; line-height:18px !important; }
+    & :is(.MuiTypography-t5, .MuiTypography-t6) { font-size:12px !important; line-height:16px !important; } }
+  & [data-cm-od=col] { display:flex !important; flex-direction:row !important; flex-wrap:wrap; align-items:baseline; align-content:flex-start; gap:2px 0; flex:1 1 0 !important; min-width:0; height:auto !important;
+    & > * { margin:0 !important; height:auto !important; min-height:0 !important; }
+    & > :first-child { flex:0 0 100%; }
+    & > div:empty { display:none !important; }
+    & > :is([data-cm-od=price], [data-cm-od=qty])::before { content:"·"; margin:0 6px; color:var(--cm-ink-3); }
+    & [data-cm-od=itemno], & [data-cm-od=itemno] * { color:var(--cm-ink-3); }
+    & [data-cm-od=price], & [data-cm-od=price] * { font-weight:600 !important; color:var(--cm-ink) !important; }
+    & [data-cm-od=qty] { display:inline-flex !important; width:auto !important; & > :last-child { display:none !important; } } /* the "Total" label */
+    & [data-cm-od=total] { width:auto !important; & * { font-weight:600 !important; } &::before { content:"· Total"; font-weight:400; margin:0 4px 0 6px; } }
+    /* "CA EWST FEE 35+ · $6.00" */
+    & [data-cm-od=fees] { flex:0 0 100%; margin-top:2px !important;
+      & > div { display:flex !important; gap:0 6px; align-items:baseline; } & > div > div:nth-child(n+3) { display:none !important; }
+      & > div > * { display:block !important; color:var(--cm-ink-3); } & > div > * + *::before { content:"· "; } } }
+  & [data-cm-od=col][data-cm-q1="1"] [data-cm-od=total] { display:none !important; }
+
+  & [data-cm-od=actions] { display:flex !important; flex-direction:row !important; align-items:center; align-self:flex-end !important; gap:8px; flex:none; width:auto !important; height:auto !important; padding:0 0 2px !important;
+    & > * { margin:0 !important; width:auto !important; height:auto !important; }
+    & button { display:inline-flex !important; align-items:center; justify-content:center; height:28px !important; min-height:0 !important; width:auto !important; padding:0 12px !important;
+      font-size:13px !important; border-radius:4px !important; & * { color:inherit !important; } }
+    & button[data-cm-od=resched] { background:#fff !important; color:var(--cm-blue) !important; border:1px solid var(--cm-blue) !important; }
+    & button[data-cm-od=buyagain] { width:28px !important; min-width:0 !important; padding:0 !important; font-size:0 !important;
+      &::before { content:"\e1a0"; font-family:Phosphor; font-size:16px; line-height:1; } }
+    & button[data-cm-od=cancel] { border:0 !important; background:none !important; padding:0 4px !important; text-decoration:underline; } }
+
+  /* services: only the "second appointment" notice stays */
+  & [data-cm-od=services] { background:none !important; border:0 !important; padding:0 !important; margin:8px 0 0 !important; width:auto !important;
+    & > * { display:none !important; }
+    & > :has([data-cm-od=svcalert]) { display:block !important; }
+    & > :has([data-cm-od=svcalert]) > :not(:has([data-cm-od=svcalert])):not([data-cm-od=svcalert]) { display:none !important; } }
+  & [data-cm-od=services]:not(:has([data-cm-od=svcalert])) { display:none !important; }
+  & [data-cm-od=svcalert] { display:flex !important; gap:8px; padding:8px 10px !important; border-width:1px !important; margin:0 !important;
+    &, & * { font-size:12px !important; line-height:16px !important; } & svg { width:16px !important; height:16px !important; } }
+}

@@ -1,5 +1,6 @@
 import { $$ } from '../../core/dom';
 import type { Plugin } from '../../core/plugin';
+import { markDetails } from './details';
 import './orders.css';
 
 // Costco's account pages are React with hashed MUI classes, so the parts get data-cm-o marks from Costco's own ids
@@ -41,11 +42,11 @@ function mark() {
 
 export const orders: Plugin = {
   id: 'orders',
-  name: 'Compact orders list',
+  name: 'Compact orders and order details',
   setup: () => {
     // throttled: the account app mutates continuously, so a debounce would never fire
     let t = 0;
-    new MutationObserver(() => { t ||= window.setTimeout(() => { t = 0; mark(); }, 150); }).observe(document.body, { childList: true, subtree: true });
-    mark();
+    new MutationObserver(() => { t ||= window.setTimeout(() => { t = 0; mark(); markDetails(); }, 150); }).observe(document.body, { childList: true, subtree: true });
+    mark(); markDetails();
   },
 };

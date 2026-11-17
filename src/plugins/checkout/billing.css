@@ -62,8 +62,10 @@
     & :is(#checkout-success-shop-card-container, #dw-shop-card-error-container) { padding:6px 10px !important; font-size:12px !important; line-height:16px; }
     & #addShopCardSubModuleContainer { padding:12px !important; & [class*="col-"], & #addshopcard-module, & form, & input { width:100% !important; float:none !important; } }
     & #credit-card-block-review { margin:0 !important; }
-    /* the saved card and Click to Pay side by side */
-    & #payment-method-radio-buttons fieldset { display:flex; align-items:center; flex-wrap:wrap; gap:6px 24px; margin:0 !important; }
+    /* each payment option on its own line; a card's number and expiry share one: "visa ending in 8179 · Expires 02/29" */
+    & #payment-method-radio-buttons fieldset { display:flex; flex-direction:column; gap:6px; margin:0 !important; }
+    & .card-information br { display:none; }
+    & .card-information [automation-id=paymentCardNumber]::after { content:" ·"; font-weight:400; color:var(--cm-ink-3); }
     /* card box: radio, logo and card details on one line, Click to Pay under it */
     & .card-container { display:flex; align-items:center; gap:10px; }
     & .card-image { width:auto !important; flex:none; margin:0 !important; padding:0 !important; }

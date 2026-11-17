@@ -104,6 +104,10 @@
     & .order-item .item-shipping-container > .remove-link { grid-column:4; grid-row:1; margin:0 !important;
       & button, & span { font-size:12px !important; line-height:16px !important; padding:0 !important; height:auto !important; } }
     & .top-row + .row > :last-child { grid-column:5; grid-row:1; justify-self:end; }
+    /* Costco's "ships the same day as similar items" note: a slim line under the title */
+    & .item-shipping-container > .ltl-container { grid-column:2 / -1; grid-row:2; margin:4px 0 0 !important; padding:0 !important;
+      & .ltl-warning { margin:0 !important; padding:2px 8px !important; border-width:0 0 0 2px !important; }
+      & .ltl-warning, & .ltl-warning * { font-size:12px !important; line-height:16px !important; } }
     & .top-row .col-md-12 { display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; }
     & .product-title { flex:0 0 100%; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     & .product-title, & .product-title * { font-size:14px !important; line-height:20px !important; }

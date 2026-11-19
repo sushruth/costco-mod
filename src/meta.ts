@@ -3,11 +3,14 @@ import pkg from '../package.json';
 const REPO = 'https://github.com/sushruth/costco-mod';
 const RAW = 'https://raw.githubusercontent.com/sushruth/costco-mod/main/costco-cart.user.js';
 const PH = 'https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular';
+// Userscript managers update only when @version grows, so the patch number is the count of commits including the one being built.
+const commits = Number(Bun.spawnSync(['git', 'rev-list', '--count', 'HEAD']).stdout.toString()) + 1;
+const version = pkg.version.replace(/\d+$/, String(commits));
 
 export const meta = [
   ['name', 'Costco, Cleaned Up'],
   ['namespace', REPO],
-  ['version', pkg.version],
+  ['version', version],
   ['description', pkg.description],
   ['match', 'https://www.costco.com/*'],
   ['run-at', 'document-idle'],
